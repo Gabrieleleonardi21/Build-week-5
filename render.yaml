@@ -1,20 +1,21 @@
 # Blueprint Render: database + backend (derivato da Deploy-Base di Matteo).
 # Su Render: New > Blueprint > repository > Apply.
-# Rinominare app-db / app-be con il nome del progetto prima del primo deploy.
+# Dopo il primo deploy: eseguire back-end/src/main/resources/db/schema.sql sul DB
+# (psql "<External Database URL>" -f ...), perche' ddl-auto=validate non crea tabelle.
 # Il servizio frontend si aggiunge quando esiste la cartella fe/
 # (vedi repo-matteo/JavaAIUnit5/HELP/Deploy-Base-*/render.yaml).
 
 databases:
-  - name: app-db
-    databaseName: app
-    user: app
+  - name: eventi-db
+    databaseName: eventi
+    user: eventi
     plan: free
     region: frankfurt
 
 services:
   # ---------- Backend: Spring Boot via Docker ----------
   - type: web
-    name: app-be
+    name: eventi-be
     runtime: docker
     plan: free
     region: frankfurt
@@ -29,8 +30,25 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: app-db
+          name: eventi-db
           property: connectionString
-      # Origine del FE per il CORS, es. https://app-fe.onrender.com
+      # Origine del FE per il CORS, es. https://eventi-fe.onrender.com
       - key: ALLOWED_ORIGIN
+        sync: false
+      # FE e BE su due sottodomini onrender.com = siti diversi: il cookie di
+      # sessione viaggia solo con SameSite=None + Secure.
+      - key: SESSION_COOKIE_SAME_SITE
+        value: none
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      # Segreti da inserire a mano nella dashboard di Render.
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
         sync: false
