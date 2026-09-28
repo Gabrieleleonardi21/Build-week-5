@@ -41,6 +41,16 @@ public class EventImage {
 	@Column(nullable = false, updatable = false)
 	private OffsetDateTime createdAt;
 
+	protected EventImage() {
+	}
+
+	// L'evento lo collega Event.addImage(), che tiene allineati i due lati della relazione.
+	public EventImage(String url, String storageKey, Integer sortOrder) {
+		this.url = url;
+		this.storageKey = storageKey;
+		this.sortOrder = sortOrder;
+	}
+
 	public UUID getId() { return id; }
 
 	public Event getEvent() { return event; }

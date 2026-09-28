@@ -39,6 +39,13 @@ public class Artist {
 	@Column(nullable = false, updatable = false)
 	private OffsetDateTime createdAt;
 
+	protected Artist() {
+	}
+
+	public Artist(String name) {
+		this.name = name;
+	}
+
 	public UUID getId() { return id; }
 
 	public String getName() { return name; }
