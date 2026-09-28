@@ -1,4 +1,4 @@
-package it.epicode.base.config;
+package it.epicode.eventi.common.config;
 
 import java.net.URI;
 
