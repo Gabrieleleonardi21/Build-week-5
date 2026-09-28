@@ -104,6 +104,21 @@ public class Event {
 			inverseJoinColumns = @JoinColumn(name = "artist_id"))
 	private Set<Artist> artists = new HashSet<>();
 
+	protected Event() {
+	}
+
+	// Campi NOT NULL di events; gli altri (descrizione, date di fine, capienza...) con i setter.
+	public Event(User owner, String title, OffsetDateTime startsAt, String address, String city,
+			Double latitude, Double longitude) {
+		this.owner = owner;
+		this.title = title;
+		this.startsAt = startsAt;
+		this.address = address;
+		this.city = city;
+		this.latitude = latitude;
+		this.longitude = longitude;
+	}
+
 	/** Aggiunge un'immagine tenendo allineati entrambi i lati della relazione. */
 	public void addImage(EventImage image) {
 		image.setEvent(this);

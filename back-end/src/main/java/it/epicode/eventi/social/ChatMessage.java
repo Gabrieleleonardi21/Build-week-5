@@ -45,6 +45,15 @@ public class ChatMessage {
 
 	private OffsetDateTime readAt;
 
+	protected ChatMessage() {
+	}
+
+	public ChatMessage(Friendship friendship, User sender, String content) {
+		this.friendship = friendship;
+		this.sender = sender;
+		this.content = content;
+	}
+
 	public UUID getId() { return id; }
 
 	public Friendship getFriendship() { return friendship; }

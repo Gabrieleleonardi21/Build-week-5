@@ -54,6 +54,16 @@ public class Friendship {
 
 	private OffsetDateTime respondedAt;
 
+	protected Friendship() {
+	}
+
+	// Nasce sempre PENDING; event = evento in cui e' nata la richiesta.
+	public Friendship(User requester, User addressee, Event event) {
+		this.requester = requester;
+		this.addressee = addressee;
+		this.event = event;
+	}
+
 	public UUID getId() { return id; }
 
 	public User getRequester() { return requester; }

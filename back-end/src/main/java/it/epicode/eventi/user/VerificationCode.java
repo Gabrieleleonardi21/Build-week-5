@@ -40,6 +40,15 @@ public class VerificationCode {
 	@Column(nullable = false, updatable = false)
 	private OffsetDateTime createdAt;
 
+	protected VerificationCode() {
+	}
+
+	public VerificationCode(User user, String code, OffsetDateTime expiresAt) {
+		this.user = user;
+		this.code = code;
+		this.expiresAt = expiresAt;
+	}
+
 	public UUID getId() { return id; }
 
 	public User getUser() { return user; }

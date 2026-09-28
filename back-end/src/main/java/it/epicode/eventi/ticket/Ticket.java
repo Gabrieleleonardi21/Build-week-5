@@ -53,6 +53,15 @@ public class Ticket {
 	// NULL = email ancora da inviare o da ritentare.
 	private OffsetDateTime emailSentAt;
 
+	protected Ticket() {
+	}
+
+	public Ticket(Event event, User user, String code) {
+		this.event = event;
+		this.user = user;
+		this.code = code;
+	}
+
 	public UUID getId() { return id; }
 
 	public Event getEvent() { return event; }
