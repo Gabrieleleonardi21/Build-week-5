@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: progetto-base
+
+  datasource:
+    # In locale valgono i valori dopo i due punti. Su Render DatabaseUrl legge
+    # DATABASE_URL e sovrascrive queste tre proprieta'.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/progetto_base}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:admin}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+server:
+  # Render assegna la porta in PORT.
+  port: ${PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  cors:
+    # In produzione: ALLOWED_ORIGIN=https://<fe>.onrender.com (piu' valori separati da virgola).
+    allowed-origins: ${ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173}

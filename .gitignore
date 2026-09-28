@@ -1,0 +1,16 @@
+# Backend
+back-end/target/
+
+# Frontend
+fe/node_modules/
+fe/dist/
+fe/.env
+fe/.env.local
+
+# Docker: variabili locali con eventuali password
+.env
+
+# Editor
+.idea/
+.vscode/
+*.iml

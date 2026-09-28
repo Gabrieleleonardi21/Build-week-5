@@ -1,0 +1,36 @@
+# Blueprint Render: database + backend (derivato da Deploy-Base di Matteo).
+# Su Render: New > Blueprint > repository > Apply.
+# Rinominare app-db / app-be con il nome del progetto prima del primo deploy.
+# Il servizio frontend si aggiunge quando esiste la cartella fe/
+# (vedi repo-matteo/JavaAIUnit5/HELP/Deploy-Base-*/render.yaml).
+
+databases:
+  - name: app-db
+    databaseName: app
+    user: app
+    plan: free
+    region: frankfurt
+
+services:
+  # ---------- Backend: Spring Boot via Docker ----------
+  - type: web
+    name: app-be
+    runtime: docker
+    plan: free
+    region: frankfurt
+    rootDir: back-end
+    # dockerfilePath parte da rootDir; buildFilter dalla radice della repo.
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    buildFilter:
+      paths:
+        - back-end/**
+        - render.yaml
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: app-db
+          property: connectionString
+      # Origine del FE per il CORS, es. https://app-fe.onrender.com
+      - key: ALLOWED_ORIGIN
+        sync: false

@@ -1,0 +1,43 @@
+# Avvio locale con Docker: database + backend, senza installare Postgres o Java 25.
+#   docker compose up --build     -> http://localhost:8080/api/stato
+#   docker compose down           -> ferma tutto (i dati restano nel volume)
+#   docker compose down -v        -> ferma tutto e cancella il database
+
+services:
+  # ---------- PostgreSQL ----------
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: progetto_base
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+    ports:
+      # Esposto anche sull'host per collegarsi con DBeaver/pgAdmin.
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    # Il backend parte solo quando Postgres accetta connessioni.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d progetto_base"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------- Backend Spring Boot (stesso Dockerfile usato da Render) ----------
+  be:
+    build: ./back-end
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # DB_URL gia' in formato JDBC: niente DATABASE_URL, che DatabaseUrl
+      # convertirebbe aggiungendo sslmode=require (non supportato dal Postgres locale).
+      DB_URL: jdbc:postgresql://db:5432/progetto_base
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-admin}
+      ALLOWED_ORIGIN: http://localhost:5173,http://localhost:4173
+    ports:
+      - "8080:8080"
+
+volumes:
+  db-data:
