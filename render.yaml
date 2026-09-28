@@ -34,3 +34,8 @@ services:
       # Origine del FE per il CORS, es. https://app-fe.onrender.com
       - key: ALLOWED_ORIGIN
         sync: false
+      # Credenziali SMTP per l'invio email (es. Gmail app password).
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
