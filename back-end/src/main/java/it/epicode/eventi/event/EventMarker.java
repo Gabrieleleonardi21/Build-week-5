@@ -40,6 +40,17 @@ public class EventMarker {
 	@Column(nullable = false)
 	private Double longitude;
 
+	protected EventMarker() {
+	}
+
+	// L'evento lo collega Event.addMarker().
+	public EventMarker(MarkerKind kind, String label, Double latitude, Double longitude) {
+		this.kind = kind;
+		this.label = label;
+		this.latitude = latitude;
+		this.longitude = longitude;
+	}
+
 	public UUID getId() { return id; }
 
 	public Event getEvent() { return event; }

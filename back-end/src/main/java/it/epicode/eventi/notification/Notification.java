@@ -52,6 +52,18 @@ public class Notification {
 	@Column(nullable = false, updatable = false)
 	private OffsetDateTime createdAt;
 
+	protected Notification() {
+	}
+
+	// event puo' essere null: notifiche non legate a un evento.
+	public Notification(User recipient, Event event, NotificationType type, String title, String body) {
+		this.recipient = recipient;
+		this.event = event;
+		this.type = type;
+		this.title = title;
+		this.body = body;
+	}
+
 	public UUID getId() { return id; }
 
 	public User getRecipient() { return recipient; }

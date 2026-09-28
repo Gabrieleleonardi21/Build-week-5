@@ -77,6 +77,21 @@ public class User {
 	@Column(nullable = false)
 	private OffsetDateTime updatedAt;
 
+	// Solo per JPA/Hibernate: l'applicazione usa il costruttore con i campi obbligatori.
+	protected User() {
+	}
+
+	// L'id non si passa mai: lo genera Hibernate al salvataggio (D02).
+	public User(String email, String passwordHash, String firstName, String lastName,
+			LocalDate birthDate, OffsetDateTime privacyAcceptedAt) {
+		this.email = email;
+		this.passwordHash = passwordHash;
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.birthDate = birthDate;
+		this.privacyAcceptedAt = privacyAcceptedAt;
+	}
+
 	public UUID getId() { return id; }
 
 	public String getEmail() { return email; }
