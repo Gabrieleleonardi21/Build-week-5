@@ -1,27 +1,62 @@
 spring:
   application:
-    name: progetto-base
+    name: eventi
 
   datasource:
     # In locale valgono i valori dopo i due punti. Su Render DatabaseUrl legge
     # DATABASE_URL e sovrascrive queste tre proprieta'.
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/progetto_base}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/eventi}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:admin}
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # Lo schema lo crea db/schema.sql (D17): Hibernate controlla soltanto che
+      # le entity combacino e blocca l'avvio se non e' cosi'.
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
 
+  # Sessioni HTTP salvate in PostgreSQL (D01): tabelle spring_session*
+  # create dalla libreria, non da schema.sql.
+  session:
+    jdbc:
+      initialize-schema: always
+
+  # Errori in formato ProblemDetail (RFC 9457) per tutta l'API.
+  mvc:
+    problemdetails:
+      enabled: true
+
+  # SMTP Gmail: MAIL_PASSWORD e' una "password per le app", non quella dell'account.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 server:
   # Render assegna la porta in PORT.
   port: ${PORT:8080}
   shutdown: graceful
+  servlet:
+    session:
+      timeout: 2h
+      cookie:
+        http-only: true
+        # In locale Lax + non secure. Su Render FE e BE sono cross-site:
+        # impostare SESSION_COOKIE_SAME_SITE=none e SESSION_COOKIE_SECURE=true.
+        same-site: ${SESSION_COOKIE_SAME_SITE:lax}
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 management:
   endpoints:
@@ -37,3 +72,13 @@ app:
   cors:
     # In produzione: ALLOWED_ORIGIN=https://<fe>.onrender.com (piu' valori separati da virgola).
     allowed-origins: ${ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173}
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME:noreply@localhost}}
+  cloudinary:
+    # Formato: cloudinary://<api_key>:<api_secret>@<cloud_name>
+    url: ${CLOUDINARY_URL:}
+  ai:
+    # OpenRouter espone un'API compatibile OpenAI; il modello deve accettare immagini.
+    base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+    api-key: ${OPENROUTER_API_KEY:}
+    model: ${OPENROUTER_MODEL:anthropic/claude-sonnet-5}

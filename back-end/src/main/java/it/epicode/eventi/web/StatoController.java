@@ -1,4 +1,4 @@
-package it.epicode.base.web;
+package it.epicode.eventi.web;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
