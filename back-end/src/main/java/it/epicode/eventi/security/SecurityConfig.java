@@ -65,6 +65,10 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login",
 								"/api/auth/verify", "/api/auth/resend-code").permitAll()
+						// Partecipanti e ticket sono dati personali: login anche in GET.
+						// Deve stare prima del permitAll su /api/events/** qui sotto (vince la prima regola).
+						.requestMatchers(HttpMethod.GET, "/api/events/*/participants", "/api/events/*/tickets/**")
+						.authenticated()
 						// Mappa pubblica ed elenco artisti visibili anche senza login (Parte 5).
 						.requestMatchers(HttpMethod.GET, "/api/events/**", "/api/artists/**").permitAll()
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
