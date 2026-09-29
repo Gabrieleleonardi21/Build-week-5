@@ -203,7 +203,7 @@ CREATE TABLE friendships (
     responded_at TIMESTAMPTZ,
 
     CONSTRAINT chk_friendships_self   CHECK (requester_id <> addressee_id),
-    CONSTRAINT chk_friendships_status CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED'))
+    CONSTRAINT chk_friendships_status CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'REMOVED'))
 );
 
 -- una sola riga per coppia di utenti, in qualunque direzione (D12)

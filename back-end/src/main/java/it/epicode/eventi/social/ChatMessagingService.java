@@ -16,7 +16,7 @@ import java.util.UUID;
 
 /**
  * Invio dei messaggi di chat in tempo reale (§6.4, D13): solo tra amici ACCEPTED,
- * e solo se il mittente fa parte dell'amicizia. Lo storico REST e' nel modulo amicizie.
+ * e solo se il mittente fa parte dell'amicizia. Bandeja e storico REST: ChatHistoryService (/api/chats).
  */
 @Service
 public class ChatMessagingService {
