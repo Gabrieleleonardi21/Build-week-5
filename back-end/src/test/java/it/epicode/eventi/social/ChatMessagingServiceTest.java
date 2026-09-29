@@ -54,6 +54,19 @@ class ChatMessagingServiceTest {
 	}
 
 	@Test
+	void send_friendshipRemoved_throwsForbidden() {
+		User anna = user();
+		Friendship removed = new Friendship(anna, user(), null);
+		// Dopo aver tolto l'amico lo storico si legge ancora, ma non si scrive piu'.
+		removed.setStatus(FriendshipStatus.REMOVED);
+		when(friendshipRepository.findWithUsersById(friendshipId)).thenReturn(Optional.of(removed));
+
+		assertThatThrownBy(() -> chatService.send(anna, friendshipId, "Ciao"))
+				.isInstanceOf(ForbiddenException.class);
+		verify(messageRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
 	void send_userNotInFriendship_throwsForbidden() {
 		Friendship accepted = new Friendship(user(), user(), null);
 		accepted.setStatus(FriendshipStatus.ACCEPTED);
