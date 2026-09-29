@@ -31,17 +31,27 @@ public class ImageStorageService {
 
 	public static final long MAX_BYTES = 5L * 1024 * 1024;
 	private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
-	private static final String FOLDER = "eventi";
+	private static final String DEFAULT_FOLDER = "eventi-dev";
 
 	private static final Logger log = LoggerFactory.getLogger(ImageStorageService.class);
 
 	private final Cloudinary cloudinary;
+	private final String folder;
 
-	public ImageStorageService(@Value("${app.cloudinary.url}") String cloudinaryUrl) {
+	public ImageStorageService(@Value("${app.cloudinary.url}") String cloudinaryUrl,
+			@Value("${app.cloudinary.folder:" + DEFAULT_FOLDER + "}") String folder) {
 		if (cloudinaryUrl == null || cloudinaryUrl.isBlank()) {
 			this.cloudinary = null;
+			// Visibile subito nei log di avvio (es. su Render), non al primo upload durante la demo.
+			log.warn("storage_disabled CLOUDINARY_URL non configurata: upload immagini disabilitati");
 		} else {
 			this.cloudinary = new Cloudinary(cloudinaryUrl);
+		}
+		// Variabile presente ma vuota (es. "CLOUDINARY_FOLDER=" nel .env): si usa comunque il default.
+		if (folder == null || folder.isBlank()) {
+			this.folder = DEFAULT_FOLDER;
+		} else {
+			this.folder = folder.trim();
 		}
 	}
 
@@ -52,7 +62,7 @@ public class ImageStorageService {
 		try {
 			// allowed_formats: anche Cloudinary rifiuta tutto cio' che non e' un'immagine ammessa.
 			Map<?, ?> result = cloudinary.uploader().upload(bytes, ObjectUtils.asMap(
-					"folder", FOLDER,
+					"folder", folder,
 					"resource_type", "image",
 					"allowed_formats", "jpg,png,webp"));
 			return new StoredImage((String) result.get("secure_url"), (String) result.get("public_id"));
@@ -70,12 +80,20 @@ public class ImageStorageService {
 	@TransactionalEventListener(fallbackExecution = true)
 	public void onFilesRemoved(StoredFilesRemoved removed) {
 		for (String key : removed.storageKeys()) {
-			try {
-				requireConfigured();
-				cloudinary.uploader().destroy(key, ObjectUtils.emptyMap());
-			} catch (IOException | RuntimeException ex) {
-				log.warn("storage_delete_failed key={} cause={}", key, ex.getMessage());
-			}
+			deleteQuietly(key);
+		}
+	}
+
+	/**
+	 * Cancella subito un file, senza mai lanciare eccezioni. Serve anche a chi ha appena
+	 * caricato un file ma poi non e' riuscito a salvare la riga: il file non resta orfano.
+	 */
+	public void deleteQuietly(String storageKey) {
+		try {
+			requireConfigured();
+			cloudinary.uploader().destroy(storageKey, ObjectUtils.emptyMap());
+		} catch (IOException | RuntimeException ex) {
+			log.warn("storage_delete_failed key={} cause={}", storageKey, ex.getMessage());
 		}
 	}
 

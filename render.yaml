@@ -48,6 +48,9 @@ services:
         sync: false
       - key: CLOUDINARY_URL
         sync: false
+      # Cartella delle immagini di produzione (in locale il default e' eventi-dev).
+      - key: CLOUDINARY_FOLDER
+        value: eventi
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL

@@ -56,7 +56,7 @@ class ImageStorageServiceTest {
 
 	@Test
 	void upload_withoutCloudinaryUrl_throwsAfterValidation() {
-		ImageStorageService storage = new ImageStorageService("");
+		ImageStorageService storage = new ImageStorageService("", "");
 		assertThatThrownBy(() -> storage.upload(file("image/jpeg", JPEG)))
 				.isInstanceOf(IllegalStateException.class);
 	}
@@ -64,9 +64,15 @@ class ImageStorageServiceTest {
 	@Test
 	void onFilesRemoved_withoutCloudinaryUrl_onlyLogs() {
 		// Un file orfano sullo storage non deve far fallire nulla.
-		ImageStorageService storage = new ImageStorageService("");
+		ImageStorageService storage = new ImageStorageService("", "");
 		assertThatCode(() -> storage.onFilesRemoved(new StoredFilesRemoved(List.of("eventi/abc"))))
 				.doesNotThrowAnyException();
+	}
+
+	@Test
+	void deleteQuietly_withoutCloudinaryUrl_neverThrows() {
+		ImageStorageService storage = new ImageStorageService("", "eventi-dev");
+		assertThatCode(() -> storage.deleteQuietly("eventi-dev/abc")).doesNotThrowAnyException();
 	}
 
 	private static MockMultipartFile file(String contentType, byte[] bytes) {

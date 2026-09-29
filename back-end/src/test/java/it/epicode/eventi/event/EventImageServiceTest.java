@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -28,6 +29,7 @@ import static it.epicode.eventi.event.EventTestData.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,6 +42,8 @@ class EventImageServiceTest {
 	@Mock EventService eventService;
 	@Mock ImageStorageService storage;
 	@Mock ApplicationEventPublisher events;
+	// Mock: TransactionTemplate chiama getTransaction/commit, qui senza un DB vero.
+	@Mock PlatformTransactionManager transactionManager;
 	@InjectMocks EventImageService imageService;
 
 	@Test
@@ -55,6 +59,31 @@ class EventImageServiceTest {
 		assertThat(res.sortOrder()).isEqualTo(2);
 		assertThat(res.url()).isEqualTo("https://img/new");
 		assertThat(event.getImages()).hasSize(2);
+	}
+
+	@Test
+	void add_saveFailsAfterUpload_deletesUploadedFile() {
+		User owner = user(Role.USER);
+		Event event = editable(owner);
+		when(storage.upload(FILE)).thenReturn(new ImageStorageService.StoredImage("https://img/new", "eventi/new"));
+		doThrow(new IllegalStateException("DB giu'")).when(eventService).flush();
+
+		assertThatThrownBy(() -> imageService.add(event.getId(), owner, FILE))
+				.isInstanceOf(IllegalStateException.class);
+		verify(storage).deleteQuietly("eventi/new");
+	}
+
+	@Test
+	void add_uploadFails_savesNothing() {
+		User owner = user(Role.USER);
+		Event event = editable(owner);
+		when(storage.upload(FILE)).thenThrow(new IllegalStateException("CLOUDINARY_URL non configurata"));
+
+		assertThatThrownBy(() -> imageService.add(event.getId(), owner, FILE))
+				.isInstanceOf(IllegalStateException.class);
+		assertThat(event.getImages()).isEmpty();
+		verify(eventService, never()).flush();
+		verify(storage, never()).deleteQuietly(any());
 	}
 
 	@Test
@@ -127,6 +156,28 @@ class EventImageServiceTest {
 		assertThat(res.posterUrl()).isEqualTo("https://img/new");
 		assertThat(row.getPosterStorageKey()).isEqualTo("eventi/new");
 		verify(events).publishEvent(new StoredFilesRemoved(List.of("eventi/old")));
+	}
+
+	@Test
+	void setPoster_eventChangedDuringUpload_deletesNewFileAndKeepsOldPoster() {
+		User owner = user(Role.USER);
+		Event event = event(owner);
+		Artist band = artist("Band A");
+		EventArtist row = new EventArtist(band, 1);
+		row.setPosterStorageKey("eventi/old");
+		event.addToLineup(row);
+		// Primo controllo ok; mentre il file sale su Cloudinary l'evento viene annullato.
+		when(eventService.findEditable(event.getId(), owner)).thenReturn(event).thenAnswer(inv -> {
+			event.setStatus(EventStatus.CANCELLED);
+			return event;
+		});
+		when(storage.upload(FILE)).thenReturn(new ImageStorageService.StoredImage("https://img/new", "eventi/new"));
+
+		assertThatThrownBy(() -> imageService.setPoster(event.getId(), band.getId(), owner, FILE))
+				.isInstanceOf(BadRequestException.class);
+		verify(storage).deleteQuietly("eventi/new");
+		assertThat(row.getPosterStorageKey()).isEqualTo("eventi/old");
+		verify(events, never()).publishEvent(any(Object.class));
 	}
 
 	@Test
