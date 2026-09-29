@@ -43,8 +43,9 @@ public class ChatHistoryService {
 				.map(last -> {
 					Friendship f = last.getFriendship();
 					User other = f.getRequester().getId().equals(me.getId()) ? f.getAddressee() : f.getRequester();
+					// canWrite con la stessa regola dell'invio: false anche se l'altro ha cancellato l'account.
 					return new ChatSummaryResponse(f.getId(), UserSummaryResponse.from(other),
-							f.getStatus() == FriendshipStatus.ACCEPTED, ChatMessageResponse.from(last),
+							f.isChatOpen(), ChatMessageResponse.from(last),
 							messageRepository.countByFriendshipIdAndSenderIdNotAndReadAtIsNull(f.getId(), me.getId()));
 				});
 	}
