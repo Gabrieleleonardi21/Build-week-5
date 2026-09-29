@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Eventi (Parte 2 e 5): lettura pubblica, scrittura solo del proprietario o di un ADMIN.
+ * Eventi (Parte 2 e 5): lettura pubblica, scrittura solo del proprietario o di un MODERATOR/SUPERADMIN.
  * Modifica e annullamento pubblicano EventChanged: il modulo notifiche avvisa i partecipanti (D11).
  * Le immagini (upload su Cloudinary) non passano da qui.
  */
@@ -144,7 +144,7 @@ public class EventService {
 	// Controllo di proprieta' (SECURITY.md §3): l'id nell'URL da solo non basta.
 	private Event findEditable(UUID id, User me) {
 		Event event = find(id);
-		if (!event.getOwner().getId().equals(me.getId()) && me.getRole() != Role.ADMIN) {
+		if (!event.getOwner().getId().equals(me.getId()) && !me.getRole().isAtLeast(Role.MODERATOR)) {
 			throw new ForbiddenException("Non sei il proprietario dell'evento");
 		}
 		return event;

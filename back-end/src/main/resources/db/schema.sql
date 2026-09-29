@@ -44,7 +44,7 @@ CREATE TABLE users (
     updated_at          TIMESTAMPTZ  NOT NULL DEFAULT now(),
 
     CONSTRAINT uq_users_email   UNIQUE (email),
-    CONSTRAINT chk_users_role   CHECK (role IN ('USER', 'ADMIN')),
+    CONSTRAINT chk_users_role   CHECK (role IN ('USER', 'MODERATOR', 'SUPERADMIN')),
     CONSTRAINT chk_users_status CHECK (status IN ('PENDING_VERIFICATION', 'ACTIVE', 'DEACTIVATED'))
 );
 

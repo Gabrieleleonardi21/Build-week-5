@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,8 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * Elenco artisti pubblico (Parte 5). Creare richiede login; modificare solo ADMIN,
- * perche' un artista e' condiviso tra gli eventi di utenti diversi.
+ * Elenco artisti pubblico (Parte 5). Creare richiede login; modificare e cancellare solo
+ * MODERATOR o SUPERADMIN, perche' un artista e' condiviso tra gli eventi di utenti diversi.
  */
 @RestController
 public class ArtistController {
@@ -48,8 +49,15 @@ public class ArtistController {
 	}
 
 	@PutMapping("/api/artists/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole('MODERATOR')")
 	public ArtistResponse update(@PathVariable UUID id, @Valid @RequestBody ArtistRequest req) {
 		return artistService.update(id, req);
+	}
+
+	@DeleteMapping("/api/artists/{id}")
+	@PreAuthorize("hasRole('MODERATOR')")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void delete(@PathVariable UUID id) {
+		artistService.delete(id);
 	}
 }

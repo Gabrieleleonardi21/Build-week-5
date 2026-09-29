@@ -83,6 +83,10 @@ app:
     allowed-origins: ${ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:noreply@localhost}}
+  bootstrap:
+    # Primo SUPERADMIN (SuperAdminBootstrap): all'avvio, se non ne esiste nessuno, viene
+    # promosso l'utente registrato con questa email. Poi la variabile non conta piu'.
+    superadmin-email: ${SUPERADMIN_EMAIL:}
   # Indirizzo del frontend: serve per i link dentro le email.
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   cloudinary:

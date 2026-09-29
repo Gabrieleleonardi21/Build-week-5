@@ -58,15 +58,28 @@ ticket o la chat dell'utente B cambiando un UUID nell'URL. Essere autenticati no
 
 ```java
 Event event = eventRepository.findById(id).orElseThrow(() -> new NotFoundException("Evento non trovato"));
-if (!event.getOwner().getId().equals(me.getId()) && me.getRole() != Role.ADMIN) {
+if (!event.getOwner().getId().equals(me.getId()) && !me.getRole().isAtLeast(Role.MODERATOR)) {
 	throw new ForbiddenException("Non sei il proprietario");
 }
 ```
 
 - Stessa regola per ticket (solo il titolare), messaggi di chat (solo i partecipanti),
   amicizie (solo i due utenti coinvolti), notifiche (solo il destinatario).
-- Funzioni di amministrazione sotto `/api/admin/**`: sono gia' riservate al ruolo `ADMIN`.
-  In alternativa `@PreAuthorize("hasRole('ADMIN')")` sul metodo.
+- Ruoli (`user/Role`), dal piu' basso: `USER` < `MODERATOR` < `SUPERADMIN`. Ogni ruolo ha
+  anche i permessi di quelli sotto (`RoleHierarchy` in `SecurityConfig`, `Role.isAtLeast` nel codice):
+  `hasRole('MODERATOR')` vale anche per un `SUPERADMIN`. Non esiste piu' `ADMIN`.
+  - `USER`: crea e gestisce i propri eventi, cerca e vede gli altri utenti (`/api/users`,
+    solo nome, cognome e avatar: mai email o altri dati personali).
+  - `MODERATOR`: modera eventi e artisti di chiunque, disattiva/riattiva gli account `USER`.
+  - `SUPERADMIN`: tutto, e in piu' e' l'unico che cambia i ruoli.
+- Area admin sotto `/api/admin/**`: gia' riservata a `MODERATOR` e superiori; il cambio di ruolo
+  a `SUPERADMIN`. Su un singolo metodo: `@PreAuthorize("hasRole('MODERATOR')")`.
+- Nel service si confronta con `isAtLeast`, non con `==`: `me.getRole() == Role.MODERATOR`
+  escluderebbe per errore i `SUPERADMIN`.
+- Nessuno cambia il proprio ruolo o il proprio stato. Dopo un cambio di ruolo o una
+  disattivazione si chiudono le sessioni dell'utente (`security/UserSessions`).
+- Il primo `SUPERADMIN` si crea solo con `SUPERADMIN_EMAIL` (`security/SuperAdminBootstrap`);
+  mai con un `UPDATE` a mano nel database di produzione.
 - Ogni controllo di permesso va coperto da un test (vedi `NotificationServiceTest`:
   `markRead_notificationOfAnotherUser_throwsForbidden`).
 
@@ -137,7 +150,7 @@ if (!event.getOwner().getId().equals(me.getId()) && me.getRole() != Role.ADMIN) 
 
 - [ ] Nessuna query costruita concatenando stringhe.
 - [ ] Ogni endpoint nuovo e' protetto, o e' elencato esplicitamente tra quelli pubblici in `SecurityConfig`.
-- [ ] Ogni operazione su una risorsa controlla che l'utente ne sia il proprietario (o `ADMIN`).
+- [ ] Ogni operazione su una risorsa controlla che l'utente ne sia il proprietario (o `MODERATOR`/`SUPERADMIN`).
 - [ ] Input tramite DTO con `@Valid`; risposte tramite DTO, mai entity.
 - [ ] Nessun `dangerouslySetInnerHTML` o `th:utext` con dati degli utenti.
 - [ ] Nessun segreto, password o codice nei log o nel repository.
