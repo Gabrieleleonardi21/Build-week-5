@@ -35,6 +35,7 @@ CREATE TABLE users (
     address_country     VARCHAR(2)   DEFAULT 'IT',
     phone               VARCHAR(30),
     avatar_url          VARCHAR(500),
+    avatar_storage_key  VARCHAR(255),                  -- public_id Cloudinary, per cancellare il file (D06, D15)
     role                VARCHAR(20)  NOT NULL DEFAULT 'USER',
     status              VARCHAR(30)  NOT NULL DEFAULT 'PENDING_VERIFICATION',
     email_verified_at   TIMESTAMPTZ,
