@@ -1,5 +1,6 @@
 package it.epicode.eventi;
 
+import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,6 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Regola del team sugli id (D02): l'UUID lo genera Hibernate, quindi in ogni @Entity
  * deve essere private, senza setter e mai passato a un costruttore.
+ * Eccezione: le tabelle di collegamento con chiave composta (@EmbeddedId, es. EventArtist),
+ * i cui valori li copia Hibernate dalle relazioni con @MapsId.
  * Scansiona tutte le entity del progetto: vale anche per quelle aggiunte in futuro.
  * Non usa il database, quindi gira sempre (anche senza Docker).
  */
@@ -54,11 +57,15 @@ class EntityIdRulesTest {
 		for (Class<?> entity : entities) {
 			Field id = idField(entity);
 			if (id == null) {
-				violations.add(entity.getSimpleName() + ": manca il campo @Id");
+				violations.add(entity.getSimpleName() + ": manca il campo @Id o @EmbeddedId");
 				continue;
 			}
 			if (!Modifier.isPrivate(id.getModifiers())) {
 				violations.add(entity.getSimpleName() + ": l'id deve essere private");
+			}
+			// Chiave composta: niente UUID generato, i valori arrivano da @MapsId.
+			if (id.isAnnotationPresent(EmbeddedId.class)) {
+				continue;
 			}
 			if (id.getType() != UUID.class) {
 				violations.add(entity.getSimpleName() + ": l'id deve essere UUID");
@@ -113,10 +120,10 @@ class EntityIdRulesTest {
 		assertThat(violations).isEmpty();
 	}
 
-	/** Campo annotato @Id nella classe (le entity del progetto non usano superclassi). */
+	/** Campo annotato @Id o @EmbeddedId nella classe (le entity del progetto non usano superclassi). */
 	private static Field idField(Class<?> entity) {
 		for (Field field : entity.getDeclaredFields()) {
-			if (field.isAnnotationPresent(Id.class)) {
+			if (field.isAnnotationPresent(Id.class) || field.isAnnotationPresent(EmbeddedId.class)) {
 				return field;
 			}
 		}
