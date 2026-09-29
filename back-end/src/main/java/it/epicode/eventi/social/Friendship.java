@@ -2,6 +2,7 @@ package it.epicode.eventi.social;
 
 import it.epicode.eventi.event.Event;
 import it.epicode.eventi.user.User;
+import it.epicode.eventi.user.UserStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -82,4 +83,17 @@ public class Friendship {
 
 	public OffsetDateTime getRespondedAt() { return respondedAt; }
 	public void setRespondedAt(OffsetDateTime respondedAt) { this.respondedAt = respondedAt; }
+
+	/**
+	 * Nella chat si puo' ancora scrivere: amici (ACCEPTED) ed entrambi gli account attivi.
+	 * Se uno dei due e' stato disattivato o ha cancellato l'account (anonimizzato, D15)
+	 * lo storico resta leggibile, ma la chat e' chiusa: nessuno leggerebbe i messaggi.
+	 */
+	public boolean isChatOpen() {
+		return status == FriendshipStatus.ACCEPTED && isActive(requester) && isActive(addressee);
+	}
+
+	private static boolean isActive(User user) {
+		return user.getStatus() == UserStatus.ACTIVE && user.getAnonymizedAt() == null;
+	}
 }

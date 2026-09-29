@@ -69,6 +69,23 @@ class ChatHistoryServiceTest {
 		assertThat(chat.canWrite()).isFalse();
 	}
 
+	@Test
+	void inbox_friendDeletedAccount_readOnlyWithAnonymizedName() {
+		// Amicizia ancora ACCEPTED, ma Bruno ha cancellato l'account (D15): la chat resta, chiusa.
+		bruno.setFirstName("Utente");
+		bruno.setLastName("eliminato");
+		bruno.setStatus(UserStatus.DEACTIVATED);
+		bruno.setAnonymizedAt(OffsetDateTime.now());
+		Friendship f = friendship(anna, bruno, FriendshipStatus.ACCEPTED);
+		when(messageRepository.findLastMessagePerChat(eq(anna.getId()), any(), any()))
+				.thenReturn(new PageImpl<>(List.of(new ChatMessage(f, bruno, "Ciao"))));
+
+		ChatSummaryResponse chat = chatHistoryService.inbox(anna, 0, 20).getContent().getFirst();
+
+		assertThat(chat.user().firstName()).isEqualTo("Utente");
+		assertThat(chat.canWrite()).isFalse();
+	}
+
 	// ---------- storico ----------
 
 	@Test

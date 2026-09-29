@@ -45,8 +45,9 @@ public class ChatMessagingService {
 				.orElseThrow(() -> new NotFoundException("Chat non trovata"));
 		boolean member = f.getRequester().getId().equals(sender.getId())
 				|| f.getAddressee().getId().equals(sender.getId());
-		if (!member || f.getStatus() != FriendshipStatus.ACCEPTED) {
-			throw new ForbiddenException("Chat disponibile solo tra amici");
+		// Amici ACCEPTED ed entrambi attivi: a un account cancellato non si scrive (Friendship.isChatOpen).
+		if (!member || !f.isChatOpen()) {
+			throw new ForbiddenException("Chat disponibile solo tra amici con account attivo");
 		}
 
 		ChatMessage message = new ChatMessage(f, sender, content.trim());
