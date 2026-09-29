@@ -99,6 +99,9 @@ app:
   cloudinary:
     # Formato: cloudinary://<api_key>:<api_secret>@<cloud_name>
     url: ${CLOUDINARY_URL:}
+    # Cartella su Cloudinary: in locale "eventi-dev" (prove, si svuota senza pensieri),
+    # su Render "eventi" (render.yaml). Cosi' test e demo non si mescolano.
+    folder: ${CLOUDINARY_FOLDER:eventi-dev}
   ai:
     # OpenRouter espone un'API compatibile OpenAI; il modello deve accettare immagini.
     base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
