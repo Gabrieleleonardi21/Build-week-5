@@ -103,7 +103,9 @@ app:
     # su Render "eventi" (render.yaml). Cosi' test e demo non si mescolano.
     folder: ${CLOUDINARY_FOLDER:eventi-dev}
   ai:
-    # OpenRouter espone un'API compatibile OpenAI; il modello deve accettare immagini.
+    # OpenRouter espone un'API compatibile OpenAI; i modelli devono accettare immagini.
     base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
     api-key: ${OPENROUTER_API_KEY:}
-    model: ${OPENROUTER_MODEL:anthropic/claude-sonnet-5}
+    # Solo modelli gratuiti (":free"), separati da virgola: se il primo e' saturo (429)
+    # OpenRouter passa da solo al successivo. Catalogo: https://openrouter.ai/models?q=free
+    model: ${OPENROUTER_MODEL:google/gemma-4-26b-a4b-it:free,google/gemma-4-31b-it:free,qwen/qwen3.8-27b:free}

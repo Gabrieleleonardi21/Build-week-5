@@ -1,6 +1,8 @@
 package it.epicode.eventi.event;
 
 import it.epicode.eventi.common.CurrentUsers;
+import it.epicode.eventi.common.exception.ServiceUnavailableException;
+import it.epicode.eventi.event.dto.AiDescriptionResponse;
 import it.epicode.eventi.event.dto.EventImageResponse;
 import it.epicode.eventi.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
@@ -28,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Controller eventi + immagini con la vera SecurityConfig: chi puo' chiamare cosa. */
-@WebMvcTest({EventController.class, EventImageController.class})
+@WebMvcTest({EventController.class, EventImageController.class, AiDescriptionController.class})
 @Import(SecurityConfig.class)
 class EventControllerTest {
 
@@ -39,6 +41,7 @@ class EventControllerTest {
 
 	@MockitoBean EventService eventService;
 	@MockitoBean EventImageService imageService;
+	@MockitoBean AiDescriptionService aiService;
 	@MockitoBean CurrentUsers currentUsers;
 
 	@Test
@@ -97,5 +100,32 @@ class EventControllerTest {
 	void uploadImage_missingFilePart_returns400() throws Exception {
 		mvc.perform(multipart(EVENT + "/images").with(user("anna@mail.it")).with(csrf()))
 				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void aiDescription_anonymous_returns401() throws Exception {
+		mvc.perform(post(EVENT + "/ai-description").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"Bozza\"}"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void aiDescription_loggedIn_returnsProposal() throws Exception {
+		when(aiService.improve(any(), any(), eq("Bozza"))).thenReturn(new AiDescriptionResponse("Proposta"));
+
+		mvc.perform(post(EVENT + "/ai-description").with(user("anna@mail.it")).with(csrf())
+						.contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"Bozza\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.proposal").value("Proposta"));
+	}
+
+	@Test
+	void aiDescription_serviceDown_returns503() throws Exception {
+		when(aiService.improve(any(), any(), any())).thenThrow(new ServiceUnavailableException("AI giu'"));
+
+		mvc.perform(post(EVENT + "/ai-description").with(user("anna@mail.it")).with(csrf())
+						.contentType(MediaType.APPLICATION_JSON).content("{}"))
+				.andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.detail").value("AI giu'"));
 	}
 }
