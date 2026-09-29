@@ -15,6 +15,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -85,8 +86,10 @@ public class Event {
 	private OffsetDateTime updatedAt;
 
 	// sort_order 0 = copertina.
+	// BatchSize: nelle liste la copertina di tutti gli eventi della pagina arriva con una sola query.
 	@OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("sortOrder ASC")
+	@BatchSize(size = 50)
 	private List<EventImage> images = new ArrayList<>();
 
 	@OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
