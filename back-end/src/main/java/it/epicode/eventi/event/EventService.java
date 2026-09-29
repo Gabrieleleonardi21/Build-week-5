@@ -4,6 +4,7 @@ import it.epicode.eventi.common.exception.BadRequestException;
 import it.epicode.eventi.common.exception.ConflictException;
 import it.epicode.eventi.common.exception.ForbiddenException;
 import it.epicode.eventi.common.exception.NotFoundException;
+import it.epicode.eventi.common.storage.StoredFilesRemoved;
 import it.epicode.eventi.event.dto.EventPinResponse;
 import it.epicode.eventi.event.dto.EventRequest;
 import it.epicode.eventi.event.dto.EventResponse;
@@ -32,7 +33,8 @@ import java.util.UUID;
 /**
  * Eventi (Parte 2 e 5): lettura pubblica, scrittura solo del proprietario o di un ADMIN.
  * Modifica e annullamento pubblicano EventChanged: il modulo notifiche avvisa i partecipanti (D11).
- * Le immagini (upload su Cloudinary) non passano da qui.
+ * Le immagini (upload su Cloudinary) le gestisce EventImageService; qui si cancellano
+ * solo i file rimasti senza riga (evento cancellato, artista tolto dalla scaletta).
  */
 @Service
 public class EventService {
@@ -133,7 +135,16 @@ public class EventService {
 		if (eventRepository.countTickets(id, TicketStatus.VALID) > 0) {
 			throw new ConflictException("L'evento ha gia' dei partecipanti: annullalo invece di cancellarlo");
 		}
+		// Le righe di immagini e scaletta le cancella il DB (ON DELETE CASCADE), i file su Cloudinary no.
+		List<String> files = new ArrayList<>();
+		for (EventImage image : event.getImages()) {
+			addIfPresent(files, image.getStorageKey());
+		}
+		for (EventArtist row : event.getLineup()) {
+			addIfPresent(files, row.getPosterStorageKey());
+		}
 		eventRepository.delete(event);
+		removeFilesAfterCommit(files);
 	}
 
 	private Event find(UUID id) {
@@ -141,8 +152,14 @@ public class EventService {
 				.orElseThrow(() -> new NotFoundException("Evento non trovato"));
 	}
 
+	/** Salva subito le modifiche in sospeso: serve a chi deve restituire id appena generati. */
+	void flush() {
+		eventRepository.flush();
+	}
+
 	// Controllo di proprieta' (SECURITY.md §3): l'id nell'URL da solo non basta.
-	private Event findEditable(UUID id, User me) {
+	// Package-private: lo riusa EventImageService per foto e locandine.
+	Event findEditable(UUID id, User me) {
 		Event event = find(id);
 		if (!event.getOwner().getId().equals(me.getId()) && me.getRole() != Role.ADMIN) {
 			throw new ForbiddenException("Non sei il proprietario dell'evento");
@@ -197,7 +214,15 @@ public class EventService {
 		for (EventArtist row : event.getLineup()) {
 			current.put(row.getArtist().getId(), row);
 		}
+		// Chi esce dalla scaletta perde anche la locandina su Cloudinary.
+		List<String> removedPosters = new ArrayList<>();
+		for (EventArtist row : event.getLineup()) {
+			if (!artistIds.contains(row.getArtist().getId())) {
+				addIfPresent(removedPosters, row.getPosterStorageKey());
+			}
+		}
 		event.getLineup().removeIf(row -> !artistIds.contains(row.getArtist().getId()));
+		removeFilesAfterCommit(removedPosters);
 
 		for (int i = 0; i < artists.size(); i++) {
 			Artist artist = artists.get(i);
@@ -220,6 +245,19 @@ public class EventService {
 		event.getMarkers().clear();
 		for (MarkerRequest m : markers) {
 			event.addMarker(new EventMarker(m.kind(), blankToNull(m.label()), m.latitude(), m.longitude()));
+		}
+	}
+
+	private static void addIfPresent(List<String> keys, String key) {
+		if (key != null) {
+			keys.add(key);
+		}
+	}
+
+	// ImageStorageService cancella i file solo se la transazione va a buon fine.
+	private void removeFilesAfterCommit(List<String> storageKeys) {
+		if (!storageKeys.isEmpty()) {
+			events.publishEvent(new StoredFilesRemoved(storageKeys));
 		}
 	}
 
