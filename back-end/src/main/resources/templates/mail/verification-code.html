@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!-- Variabili: firstName, code, minutes (+ subject, frontendUrl aggiunte da MailService) -->
+<html xmlns:th="http://www.thymeleaf.org" lang="it">
+<head>
+	<meta charset="UTF-8">
+	<title th:text="${subject}">Conferma il tuo account</title>
+</head>
+<body style="margin:0;background:#f3f4f6;">
+<div style="max-width:560px;margin:24px auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+	<div th:replace="~{mail/layout :: header}"></div>
+
+	<div style="padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+		<p>Ciao <strong th:text="${firstName}">Anna</strong>,</p>
+		<p>per attivare il tuo account inserisci questo codice:</p>
+		<p style="font-size:32px;letter-spacing:8px;font-weight:bold;text-align:center;margin:24px 0;"
+		   th:text="${code}">123456</p>
+		<p>Il codice scade tra <span th:text="${minutes}">15</span> minuti e si pu&ograve; usare una sola volta.</p>
+		<p style="color:#6b7280;font-size:13px;">Se non ti sei registrato tu, ignora questa email.</p>
+	</div>
+
+	<div th:replace="~{mail/layout :: footer}"></div>
+</div>
+</body>
+</html>
