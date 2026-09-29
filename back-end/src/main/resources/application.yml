@@ -48,6 +48,10 @@ server:
   # Render assegna la porta in PORT.
   port: ${PORT:8080}
   shutdown: graceful
+  # Dietro il proxy di Render: IP del client (limite tentativi di login) e HTTPS
+  # (HSTS) letti da X-Forwarded-*. "native" = RemoteIpValve di Tomcat, che si
+  # fida solo dei proxy con IP interno.
+  forward-headers-strategy: native
   servlet:
     session:
       timeout: 2h

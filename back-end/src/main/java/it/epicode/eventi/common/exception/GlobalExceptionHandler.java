@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -43,6 +44,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler({ForbiddenException.class, AccessDeniedException.class})
 	public ProblemDetail forbidden(RuntimeException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Operazione non consentita");
+	}
+
+	// Login fallito: stesso messaggio per email inesistente e password sbagliata.
+	@ExceptionHandler(AuthenticationException.class)
+	public ProblemDetail unauthorized(AuthenticationException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Credenziali non valide");
+	}
+
+	@ExceptionHandler(AccountNotActiveException.class)
+	public ProblemDetail accountNotActive(AccountNotActiveException ex) {
+		ProblemDetail body = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+		body.setProperty("code", ex.getCode());
+		return body;
+	}
+
+	@ExceptionHandler(TooManyRequestsException.class)
+	public ResponseEntity<ProblemDetail> tooManyRequests(TooManyRequestsException ex) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+				.header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+				.body(ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage()));
 	}
 
 	@ExceptionHandler(ConflictException.class)
