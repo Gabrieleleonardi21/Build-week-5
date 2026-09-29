@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!--
+  Frammenti comuni delle email. Stili in linea: molti client di posta ignorano <style>.
+  Regola: solo th:text (fa l'escape), mai th:utext, perche' nomi e titoli li scrivono gli utenti.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="it">
+<body>
+
+<div th:fragment="header"
+     style="background:#1f2937;color:#ffffff;padding:20px 24px;font-family:Arial,Helvetica,sans-serif;">
+	<h1 style="margin:0;font-size:20px;">Eventi</h1>
+</div>
+
+<div th:fragment="footer"
+     style="padding:16px 24px;color:#6b7280;font-size:12px;font-family:Arial,Helvetica,sans-serif;border-top:1px solid #e5e7eb;">
+	<p style="margin:0;">Hai ricevuto questa email perch&eacute; sei registrato sulla piattaforma Eventi.</p>
+	<p style="margin:4px 0 0;">Messaggio automatico: non rispondere a questo indirizzo.</p>
+</div>
+
+</body>
+</html>
