@@ -26,6 +26,13 @@ spring:
     jdbc:
       initialize-schema: always
 
+  # Upload di foto e locandine (Cloudinary): 5 MB a file, il resto e' margine per il multipart.
+  # Oltre il limite la richiesta viene rifiutata con 413 prima di arrivare al controller.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   # Errori in formato ProblemDetail (RFC 9457) per tutta l'API.
   mvc:
     problemdetails:
