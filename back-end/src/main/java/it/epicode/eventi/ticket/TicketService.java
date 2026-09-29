@@ -113,7 +113,7 @@ public class TicketService {
 	}
 
 	/**
-	 * Partecipanti di un evento: li vedono il proprietario, un ADMIN e gli altri partecipanti
+	 * Partecipanti di un evento: li vedono il proprietario, un MODERATOR/SUPERADMIN e gli altri partecipanti
 	 * (servono per le richieste di amicizia, Parte 3). Per tutti gli altri 403.
 	 */
 	@Transactional(readOnly = true)
@@ -121,7 +121,7 @@ public class TicketService {
 		Event event = eventRepository.findById(eventId)
 				.orElseThrow(() -> new NotFoundException("Evento non trovato"));
 		boolean allowed = event.getOwner().getId().equals(me.getId())
-				|| me.getRole() == Role.ADMIN
+				|| me.getRole().isAtLeast(Role.MODERATOR)
 				|| ticketRepository.existsByEventIdAndUserIdAndStatus(eventId, me.getId(), TicketStatus.VALID);
 		if (!allowed) {
 			throw new ForbiddenException("Solo chi partecipa vede gli altri partecipanti");
