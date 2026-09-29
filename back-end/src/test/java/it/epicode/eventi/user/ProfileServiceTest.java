@@ -4,6 +4,7 @@ import it.epicode.eventi.common.exception.BadRequestException;
 import it.epicode.eventi.common.exception.NotFoundException;
 import it.epicode.eventi.common.exception.TooManyRequestsException;
 import it.epicode.eventi.common.storage.ImageStorageService;
+import it.epicode.eventi.common.storage.StoredFilesRemoved;
 import it.epicode.eventi.security.AttemptLimiter;
 import it.epicode.eventi.security.UserSessions;
 import it.epicode.eventi.user.dto.AddressDto;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -52,6 +55,7 @@ class ProfileServiceTest {
 	@Mock ImageStorageService storage;
 	// Mock: TransactionTemplate chiama getTransaction/commit, qui senza un DB vero.
 	@Mock PlatformTransactionManager transactionManager;
+	@Mock ApplicationEventPublisher events;
 
 	// Limiter vero: i test sul 429 contano davvero i tentativi.
 	private final AttemptLimiter limiter = new AttemptLimiter();
@@ -60,7 +64,8 @@ class ProfileServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		profileService = new ProfileService(userRepository, ENCODER, limiter, userSessions, storage, transactionManager);
+		profileService = new ProfileService(userRepository, ENCODER, limiter, userSessions, storage, transactionManager,
+				events);
 		anna = user("anna@mail.it", Role.USER);
 	}
 
@@ -152,7 +157,31 @@ class ProfileServiceTest {
 
 		assertThat(res.avatarUrl()).isEqualTo("https://img/nuovo.png");
 		assertThat(anna.getAvatarUrl()).isEqualTo("https://img/nuovo.png");
+		assertThat(anna.getAvatarStorageKey()).isEqualTo("eventi-dev/nuovo");
 		verify(storage, never()).deleteQuietly(anyString());
+	}
+
+	@Test
+	void setAvatar_replacingOldAvatar_deletesOldFileAfterCommit() {
+		anna.setAvatarStorageKey("eventi-dev/vecchio");
+		stubLoad(anna);
+		when(storage.upload(FILE)).thenReturn(STORED);
+
+		profileService.setAvatar(anna, FILE);
+
+		verify(events).publishEvent(new StoredFilesRemoved(List.of("eventi-dev/vecchio")));
+		assertThat(anna.getAvatarStorageKey()).isEqualTo("eventi-dev/nuovo");
+	}
+
+	@Test
+	void setAvatar_oldAvatarWithoutKey_publishesNothing() {
+		// Avatar caricato prima della migrazione 003: nessun public_id da cancellare.
+		stubLoad(anna);
+		when(storage.upload(FILE)).thenReturn(STORED);
+
+		profileService.setAvatar(anna, FILE);
+
+		verify(events, never()).publishEvent(any(Object.class));
 	}
 
 	@Test
@@ -162,6 +191,7 @@ class ProfileServiceTest {
 
 		assertThatThrownBy(() -> profileService.setAvatar(anna, FILE)).isInstanceOf(NotFoundException.class);
 		verify(storage).deleteQuietly("eventi-dev/nuovo");
+		verify(events, never()).publishEvent(any(Object.class));
 	}
 
 	@Test
@@ -174,12 +204,15 @@ class ProfileServiceTest {
 	}
 
 	@Test
-	void deleteAvatar_removesUrl() {
+	void deleteAvatar_removesUrlAndFileAfterCommit() {
+		anna.setAvatarStorageKey("eventi-dev/avatar");
 		stubLoad(anna);
 
 		profileService.deleteAvatar(anna);
 
 		assertThat(anna.getAvatarUrl()).isNull();
+		assertThat(anna.getAvatarStorageKey()).isNull();
+		verify(events).publishEvent(new StoredFilesRemoved(List.of("eventi-dev/avatar")));
 	}
 
 	@Test
@@ -194,6 +227,7 @@ class ProfileServiceTest {
 
 	@Test
 	void deleteAccount_ok_anonymizesPersonalDataAndClosesSessions() {
+		anna.setAvatarStorageKey("eventi-dev/avatar");
 		stubLoad(anna);
 
 		profileService.deleteAccount(anna, new DeleteAccountRequest(PASSWORD));
@@ -205,6 +239,9 @@ class ProfileServiceTest {
 		assertThat(anna.getAddress()).isNull();
 		assertThat(anna.getPhone()).isNull();
 		assertThat(anna.getAvatarUrl()).isNull();
+		assertThat(anna.getAvatarStorageKey()).isNull();
+		// D15: la foto e' un dato personale, il file sparisce anche da Cloudinary.
+		verify(events).publishEvent(new StoredFilesRemoved(List.of("eventi-dev/avatar")));
 		assertThat(anna.getStatus()).isEqualTo(UserStatus.DEACTIVATED);
 		assertThat(anna.getAnonymizedAt()).isNotNull();
 		// Con la vecchia password non si entra piu'.
@@ -223,6 +260,7 @@ class ProfileServiceTest {
 		assertThat(anna.getAnonymizedAt()).isNull();
 		assertThat(anna.getStatus()).isEqualTo(UserStatus.ACTIVE);
 		verify(userSessions, never()).invalidateAll(anyString());
+		verify(events, never()).publishEvent(any(Object.class));
 	}
 
 	@Test

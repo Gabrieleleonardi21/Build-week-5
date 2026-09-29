@@ -71,6 +71,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
 	}
 
+	@ExceptionHandler(ServiceUnavailableException.class)
+	public ProblemDetail serviceUnavailable(ServiceUnavailableException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+	}
+
 	// Vincoli del DB (UNIQUE, CHECK) violati: es. doppia iscrizione allo stesso evento.
 	// Il messaggio originale contiene SQL e valori: si logga, non si restituisce.
 	@ExceptionHandler(DataIntegrityViolationException.class)

@@ -4,6 +4,7 @@ import it.epicode.eventi.common.exception.BadRequestException;
 import it.epicode.eventi.common.exception.NotFoundException;
 import it.epicode.eventi.common.exception.TooManyRequestsException;
 import it.epicode.eventi.common.storage.ImageStorageService;
+import it.epicode.eventi.common.storage.StoredFilesRemoved;
 import it.epicode.eventi.security.AttemptLimiter;
 import it.epicode.eventi.security.UserSessions;
 import it.epicode.eventi.user.dto.AddressDto;
@@ -13,6 +14,7 @@ import it.epicode.eventi.user.dto.ProfileResponse;
 import it.epicode.eventi.user.dto.UpdateProfileRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.Locale;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -44,15 +47,18 @@ public class ProfileService {
 	private final UserSessions userSessions;
 	private final ImageStorageService storage;
 	private final TransactionTemplate tx;
+	private final ApplicationEventPublisher events;
 
 	public ProfileService(UserRepository userRepository, PasswordEncoder passwordEncoder, AttemptLimiter limiter,
-			UserSessions userSessions, ImageStorageService storage, PlatformTransactionManager transactionManager) {
+			UserSessions userSessions, ImageStorageService storage, PlatformTransactionManager transactionManager,
+			ApplicationEventPublisher events) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.limiter = limiter;
 		this.userSessions = userSessions;
 		this.storage = storage;
 		this.tx = new TransactionTemplate(transactionManager);
+		this.events = events;
 	}
 
 	@Transactional
@@ -88,15 +94,16 @@ public class ProfileService {
 	/**
 	 * Upload fuori transazione, come in EventImageService: Cloudinary impiega secondi e non
 	 * deve tenere occupata una connessione del DB. Se il salvataggio fallisce il file appena
-	 * caricato si cancella subito. Il vecchio avatar resta su Cloudinary: users non ha una
-	 * colonna per il suo public_id.
+	 * caricato si cancella subito. Il vecchio avatar si cancella da Cloudinary dopo il commit.
 	 */
 	public ProfileResponse setAvatar(User me, MultipartFile file) {
 		ImageStorageService.StoredImage stored = storage.upload(file);
 		try {
 			return tx.execute(status -> {
 				User user = load(me);
+				removeAvatarFileAfterCommit(user);
 				user.setAvatarUrl(stored.url());
+				user.setAvatarStorageKey(stored.storageKey());
 				return ProfileResponse.from(user);
 			});
 		} catch (RuntimeException ex) {
@@ -111,7 +118,7 @@ public class ProfileService {
 		if (user.getAvatarUrl() == null) {
 			throw new NotFoundException("Nessun avatar da cancellare");
 		}
-		user.setAvatarUrl(null);
+		clearAvatar(user);
 	}
 
 	/**
@@ -138,7 +145,8 @@ public class ProfileService {
 		user.setBirthDate(null);
 		user.setAddress(null);
 		user.setPhone(null);
-		user.setAvatarUrl(null);
+		// D15: anche la foto e' un dato personale, il file sparisce da Cloudinary.
+		clearAvatar(user);
 		user.setStatus(UserStatus.DEACTIVATED);
 		user.setAnonymizedAt(OffsetDateTime.now());
 
@@ -190,5 +198,19 @@ public class ProfileService {
 
 	private static String blankToNull(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
+	}
+
+	private void clearAvatar(User user) {
+		removeAvatarFileAfterCommit(user);
+		user.setAvatarUrl(null);
+		user.setAvatarStorageKey(null);
+	}
+
+	// Dopo il commit (ImageStorageService): se la transazione fallisce, riga e file restano allineati.
+	// Gli avatar caricati prima della migrazione 003 non hanno la chiave e non si possono cancellare.
+	private void removeAvatarFileAfterCommit(User user) {
+		if (user.getAvatarStorageKey() != null) {
+			events.publishEvent(new StoredFilesRemoved(List.of(user.getAvatarStorageKey())));
+		}
 	}
 }
