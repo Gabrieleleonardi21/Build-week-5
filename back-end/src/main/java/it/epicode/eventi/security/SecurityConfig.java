@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -67,9 +69,24 @@ public class SecurityConfig {
 								"/api/auth/verify", "/api/auth/resend-code").permitAll()
 						// Mappa pubblica ed elenco artisti visibili anche senza login (Parte 5).
 						.requestMatchers(HttpMethod.GET, "/api/events/**", "/api/artists/**").permitAll()
-						.requestMatchers("/api/admin/**").hasRole("ADMIN")
+						// Cambiare ruoli: solo SUPERADMIN. Il resto dell'area admin: da MODERATOR in su.
+						.requestMatchers(HttpMethod.PATCH, "/api/admin/users/*/role").hasRole("SUPERADMIN")
+						.requestMatchers("/api/admin/**").hasRole("MODERATOR")
 						.anyRequest().authenticated());
 		return http.build();
+	}
+
+	/**
+	 * SUPERADMIN include MODERATOR, che include USER: hasRole("MODERATOR") vale anche
+	 * per un SUPERADMIN, sia qui sia in @PreAuthorize. Stesso ordine dell'enum Role.
+	 * static: la method security lo legge mentre si sta ancora configurando.
+	 */
+	@Bean
+	static RoleHierarchy roleHierarchy() {
+		return RoleHierarchyImpl.withDefaultRolePrefix()
+				.role("SUPERADMIN").implies("MODERATOR")
+				.role("MODERATOR").implies("USER")
+				.build();
 	}
 
 	/**

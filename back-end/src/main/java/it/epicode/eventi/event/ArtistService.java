@@ -14,7 +14,7 @@ import java.util.UUID;
 /**
  * Artisti condivisi tra piu' eventi (D07). Leggerli e' pubblico; li crea chi e' loggato,
  * anche indirettamente dalla scaletta di un evento. Non hanno un proprietario:
- * modificarli puo' solo un ADMIN (vedi ArtistController).
+ * modificarli e cancellarli possono solo MODERATOR e SUPERADMIN (vedi ArtistController).
  */
 @Service
 public class ArtistService {
@@ -66,6 +66,20 @@ public class ArtistService {
 		artist.setName(name);
 		apply(artist, req);
 		return ArtistResponse.from(artist);
+	}
+
+	/**
+	 * Moderazione: cancella un artista che non e' in nessuna scaletta.
+	 * Se lo fosse, ON DELETE CASCADE lo toglierebbe in silenzio dagli eventi di altri
+	 * utenti: in quel caso si corregge con update invece di cancellarlo.
+	 */
+	@Transactional
+	public void delete(UUID id) {
+		Artist artist = find(id);
+		if (artistRepository.countLineupEntries(id) > 0) {
+			throw new ConflictException("L'artista e' nella scaletta di almeno un evento: modificalo invece di cancellarlo");
+		}
+		artistRepository.delete(artist);
 	}
 
 	/** Artista con quel nome, ignorando le maiuscole; se non c'e' lo crea con il solo nome (D07). */

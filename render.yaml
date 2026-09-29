@@ -52,3 +52,6 @@ services:
         sync: false
       - key: OPENROUTER_MODEL
         sync: false
+      # Primo SUPERADMIN: email di un utente gia' registrato (vedi SuperAdminBootstrap).
+      - key: SUPERADMIN_EMAIL
+        sync: false
