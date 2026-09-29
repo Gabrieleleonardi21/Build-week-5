@@ -1,12 +1,15 @@
 package it.epicode.eventi.event;
 
 import it.epicode.eventi.ticket.TicketStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface EventRepository extends JpaRepository<Event, UUID> {
@@ -27,6 +30,14 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
 	// Usa l'indice idx_events_owner.
 	Page<Event> findByOwnerIdOrderByStartsAtDesc(UUID ownerId, Pageable pageable);
+
+	/**
+	 * Evento con lock sulla riga fino alla fine della transazione: due iscrizioni
+	 * simultanee all'ultimo posto libero passano una alla volta.
+	 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select e from Event e where e.id = :id")
+	Optional<Event> findByIdForUpdate(UUID id);
 
 	/** Partecipanti = ticket nello stato indicato (D09). Serve per capienza e cancellazione. */
 	@Query("select count(t) from Ticket t where t.event.id = :eventId and t.status = :status")
