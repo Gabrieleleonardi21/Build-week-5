@@ -23,4 +23,11 @@ public class UserSessions {
 	public void invalidateAll(String email) {
 		sessions.findByPrincipalName(email).keySet().forEach(sessions::deleteById);
 	}
+
+	/** Come invalidateAll, ma lascia aperta una sessione: es. quella da cui si e' appena cambiata la password. */
+	public void invalidateAllExcept(String email, String keepSessionId) {
+		sessions.findByPrincipalName(email).keySet().stream()
+				.filter(id -> !id.equals(keepSessionId))
+				.forEach(sessions::deleteById);
+	}
 }
