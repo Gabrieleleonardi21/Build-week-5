@@ -103,10 +103,10 @@ class EventServiceTest {
 	}
 
 	@Test
-	void update_admin_canEditAnyEventAndNotifiesHolders() {
+	void update_moderator_canEditAnyEventAndNotifiesHolders() {
 		Event event = stored(event(user(Role.USER)));
 
-		eventService.update(event.getId(), user(Role.ADMIN), request(OffsetDateTime.now().plusDays(10), null));
+		eventService.update(event.getId(), user(Role.MODERATOR), request(OffsetDateTime.now().plusDays(10), null));
 
 		verify(events).publishEvent(new EventChanged(event.getId(), false));
 	}
