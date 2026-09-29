@@ -62,6 +62,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
+		<!-- Template HTML delle email (th:text fa l'escape dei dati utente). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
 		<!-- Upload immagini evento su storage esterno (D06). -->
 		<dependency>
 			<groupId>com.cloudinary</groupId>
