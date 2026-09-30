@@ -13,6 +13,24 @@ npm run lint && npm run typecheck && npm run test && npm run build
 npm run coverage
 ```
 
+## Dati demo
+
+Per vedere l'app già piena, avviare il backend una volta con `SEED_DATA=true` su un database senza utenti:
+
+```bash
+cd back-end && SEED_DATA=true ./mvnw spring-boot:run
+```
+
+Crea 8 utenti, 10 artisti, 10 eventi in città italiane (con foto, scaletta, ingressi e uscite; uno annullato e uno passato), ticket, amicizie, chat e notifiche. Se il database ha già utenti non fa nulla. Password di tutti gli account: `Password123!` (variabile `SEED_PASSWORD`).
+
+| Account | Ruolo | Da provare |
+|---|---|---|
+| `admin@eventi.dev` | SUPERADMIN | area admin, cambio ruoli |
+| `moderatore@eventi.dev` | MODERATOR | moderazione account ed eventi |
+| `marco.rinaldi@eventi.dev` | USER | organizzatore di 4 eventi (uno annullato, uno passato) |
+| `luca.moretti@eventi.dev` | USER | ticket, notifiche, chat con Sara, richiesta di Elena da accettare |
+| `sara.colombo@eventi.dev` | USER | due chat (Luca, Davide) |
+
 ## Struttura
 
 - `src/lib/`: utility condivise (`api`, `csrf`, `errors`, `upload`, `upload-manager`, `dom` con `make()`, `format`, `query`, `roles`).
