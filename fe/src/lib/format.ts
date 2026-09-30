@@ -25,6 +25,11 @@ export function formatDate(iso: string): string {
   return dateFormat.format(new Date(iso))
 }
 
+/** "21:00" */
+export function formatTime(iso: string): string {
+  return timeFormat.format(new Date(iso))
+}
+
 /** "21:00 - 22:30", "21:00", oppure "" se l'orario non c'e'. */
 export function formatTimeRange(start: string | null, end: string | null): string {
   if (start === null) {

@@ -48,6 +48,18 @@ Per ogni nuova pagina con una lista seguire lo stesso schema:
 4. `QueryState` con skeleton della stessa forma, `EmptyState` per il vuoto, `Pagination` in fondo.
 5. Test con MSW (`DiscoverPage.test.tsx`): dati, filtri nell'URL e nella richiesta, vuoto, errore, paginazione.
 
+## Spazi riservati alle tracce
+
+Il dettaglio evento (`features/events/pages/EventDetailPage.tsx`) monta già i componenti delle altre tracce, con le props definite. In sviluppo mostrano un riquadro tratteggiato "Da implementare", in produzione niente. Basta sostituire il contenuto del componente, senza toccare la pagina:
+
+| Componente | Traccia | Props |
+|---|---|---|
+| `features/tickets/components/JoinButton.tsx` | T4 Social | `event: EventResponse` |
+| `features/tickets/components/ParticipantsList.tsx` | T4 Social | `eventId: string` (solo utenti loggati) |
+| `features/events/components/OwnerActions.tsx` | T3 Organizzatore | `event: EventResponse` (solo proprietario o moderatore) |
+
+Nei commenti di ogni componente ci sono endpoint e casi da gestire (404, 409, evento annullato).
+
 ## Regole (controllate da ESLint)
 
 - Niente operatori ternari: calcolare il valore prima del JSX con `if/else`.

@@ -183,3 +183,49 @@
     }
   }
 }
+/* Pin della mappa (Leaflet): elementi creati con make() in components/map/pin-icons.ts. */
+@layer components {
+  .map-icon {
+    background: transparent;
+    border: 0;
+  }
+  .map-pin {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    background: var(--primary);
+    box-shadow: 0 2px 6px oklch(0 0 0 / 30%);
+  }
+  .map-pin__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--background);
+  }
+  .map-marker {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--background);
+    /* Colore dello sfondo: chiaro sui marker scuri del tema chiaro, scuro su quelli chiari del tema scuro. */
+    color: var(--background);
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 1px 4px oklch(0 0 0 / 30%);
+  }
+  .map-marker--entrance { background: var(--marker-entrance); }
+  .map-marker--exit { background: var(--marker-exit); }
+  .map-marker--emergency { background: var(--marker-emergency); }
+  /* Tooltip di Leaflet con i colori del tema. */
+  .leaflet-tooltip {
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border-color: var(--border);
+    font-family: var(--font-sans);
+  }
+}

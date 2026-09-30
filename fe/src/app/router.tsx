@@ -37,6 +37,8 @@ export const routes: RouteObject[] = [
   {
     element: <AppLayout />,
     errorElement: <ErrorPage />,
+    // Aprendo direttamente una pagina lazy (es. il link di un'email), finche' il codice non arriva.
+    hydrateFallbackElement: <div className="min-h-dvh" aria-busy="true" aria-label="Caricamento…" />,
     children: [
       ...collect('public'),
       { element: <RequireGuest />, children: collect('guest') },

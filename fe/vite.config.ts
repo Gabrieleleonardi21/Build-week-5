@@ -12,6 +12,11 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
+  // Librerie caricate solo da pagine lazy (mappa, tempo reale): pre-ottimizzate all'avvio,
+  // altrimenti alla prima apertura di un evento Vite le scopre e ricarica la pagina.
+  optimizeDeps: {
+    include: ['leaflet', 'react-leaflet', '@stomp/stompjs'],
+  },
   server: {
     proxy: {
       '/api': { target: BACKEND, changeOrigin: false },
