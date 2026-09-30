@@ -1,0 +1,68 @@
+# Controlli del frontend su ogni PR verso main e su ogni push su main.
+# Oltre a lint, tipi, test e build verifica che i tipi generati da docs/openapi.yaml
+# siano aggiornati: se qualcuno cambia un endpoint senza rigenerarli, la PR si ferma qui.
+name: Frontend
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["fe/**", "docs/openapi.yaml", ".github/workflows/frontend.yml"]
+  push:
+    branches: [main]
+    paths: ["fe/**", "docs/openapi.yaml", ".github/workflows/frontend.yml"]
+
+# Una nuova spinta sulla stessa PR annulla il controllo precedente ancora in corso.
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+
+      - name: Dipendenze
+        run: npm ci
+
+      - name: Tipi allineati a docs/openapi.yaml
+        run: |
+          npm run gen:api
+          git diff --exit-code -- src/lib/api-schema.ts || {
+            echo "::error::src/lib/api-schema.ts non e' aggiornato: lanciare 'npm run gen:api' e committare il file."
+            exit 1
+          }
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test e copertura
+        run: npm run coverage
+
+      - name: Build
+        run: npm run build
+
+      # Report consultabile dalla pagina del controllo (Artifacts), anche se i test falliscono.
+      - name: Report copertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-frontend
+          path: fe/coverage/
+          if-no-files-found: ignore
