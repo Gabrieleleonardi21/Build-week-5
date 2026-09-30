@@ -48,6 +48,9 @@ export default defineConfig({
     // URL assoluto: fetch in Node non accetta percorsi relativi. MSW intercetta questo host.
     env: { VITE_API_URL: 'http://api.test' },
     css: false,
+    // I test delle pagine montano l'app intera con le rotte lazy: a freddo, con la coverage attiva e sui
+    // runner di GitHub (2 core) il primo supera i 5 s predefiniti. E' un tetto, non rallenta gli altri.
+    testTimeout: 20_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
