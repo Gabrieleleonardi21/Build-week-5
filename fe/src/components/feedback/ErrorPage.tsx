@@ -12,7 +12,7 @@ export function ErrorPage() {
   }
   return (
     <main className="mx-auto grid min-h-[60dvh] max-w-md content-center justify-items-center gap-4 px-4 text-center">
-      <h1 className="text-2xl font-semibold">{title}</h1>
+      <h1 className="text-2xl font-semibold text-balance">{title}</h1>
       <p className="text-muted-foreground">{description}</p>
       <Button asChild>
         <Link to="/">Torna alla home</Link>
@@ -24,7 +24,7 @@ export function ErrorPage() {
 export function NotFoundPage() {
   return (
     <section className="mx-auto grid min-h-[60dvh] max-w-md content-center justify-items-center gap-4 px-4 text-center">
-      <h1 className="text-2xl font-semibold">Pagina non trovata</h1>
+      <h1 className="text-2xl font-semibold text-balance">Pagina non trovata</h1>
       <p className="text-muted-foreground">L'indirizzo non esiste o è stato spostato.</p>
       <Button asChild>
         <Link to="/">Torna alla home</Link>

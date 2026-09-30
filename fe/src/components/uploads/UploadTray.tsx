@@ -22,19 +22,21 @@ export function UploadTray({ manager = uploadManager }: UploadTrayProps) {
   }
 
   let title = 'Caricamenti completati'
-  if (pending.length > 0) {
+  if (pending.length === 1) {
+    title = 'Caricamento di 1 immagine'
+  } else if (pending.length > 1) {
     title = `Caricamento di ${pending.length} immagini`
   }
 
   return (
     <section
       aria-label="Caricamento immagini"
-      className="fixed right-4 bottom-4 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg"
+      className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 w-[min(22rem,calc(100vw-2rem))] rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg"
     >
-      <h2 className="text-sm font-semibold" aria-live="polite">
+      <h2 className="text-sm font-semibold text-balance" aria-live="polite">
         {title}
       </h2>
-      <ul className="mt-2 max-h-72 divide-y overflow-y-auto">
+      <ul className="mt-2 max-h-72 divide-y overflow-y-auto overscroll-contain">
         {items.map((item) => (
           <UploadItemRow
             key={item.id}

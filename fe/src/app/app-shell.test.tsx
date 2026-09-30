@@ -37,8 +37,9 @@ describe('guardie e layout', () => {
     renderRoute('/me/tickets')
 
     expect(await screen.findByRole('heading', { name: 'I miei ticket' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Anna' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Menu di Anna Bianchi' }))
+    expect(await screen.findByRole('menuitem', { name: 'Profilo' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Moderazione' })).not.toBeInTheDocument()
   })
 
   it('area admin: USER torna alla home, MODERATOR entra', async () => {
@@ -50,6 +51,8 @@ describe('guardie e layout', () => {
     loggedAs(user('MODERATOR'))
     renderRoute('/admin/users')
     expect(await screen.findByRole('heading', { name: 'Account' })).toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Menu di Anna Bianchi' }))
+    expect(await screen.findByRole('menuitem', { name: 'Moderazione' })).toBeInTheDocument()
   })
 
   it('chi e\' loggato non vede il login', async () => {
@@ -83,9 +86,9 @@ describe('guardie e layout', () => {
       }),
     )
     renderRoute('/')
-    await screen.findByRole('link', { name: 'Anna' })
-
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Esci' }))
+    const clicker = userEvent.setup()
+    await clicker.click(await screen.findByRole('button', { name: 'Menu di Anna Bianchi' }))
+    await clicker.click(await screen.findByRole('menuitem', { name: 'Esci' }))
 
     expect(await screen.findByRole('link', { name: 'Accedi' })).toBeInTheDocument()
     expect(logoutHeader).not.toBeNull()
@@ -106,7 +109,7 @@ describe('sessione scaduta', () => {
   it('un 401 su una chiamata autenticata riporta l\'utente ad anonimo', async () => {
     loggedAs(user())
     renderRoute('/me/tickets')
-    await screen.findByRole('link', { name: 'Anna' })
+    await screen.findByRole('button', { name: 'Menu di Anna Bianchi' })
 
     // Simula una chiamata qualsiasi che trova la sessione scaduta.
     server.use(http.get(`${API}/api/notifications/unread-count`, () => new HttpResponse(null, { status: 401 })))

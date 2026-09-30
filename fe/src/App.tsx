@@ -1,6 +1,11 @@
+import { IconContext } from '@phosphor-icons/react'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { MotionConfig } from 'motion/react'
 import { ThemeProvider } from 'next-themes'
 import { useState } from 'react'
+
+// Una sola famiglia di icone con un solo peso in tutta l'app (skill design-taste-frontend).
+const ICONS = { size: 20, weight: 'regular' } as const
 import { RouterProvider } from 'react-router'
 import { createQueryClient } from '@/app/query-client'
 import { createAppRouter } from '@/app/router'
@@ -20,13 +25,18 @@ function App() {
 
   return (
     // Tema chiaro/scuro con la classe .dark (token di shadcn); di default segue il sistema.
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <RouterProvider router={router} />
-        </AuthProvider>
-        <Toaster richColors closeButton />
-      </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      {/* reducedMotion="user": se il sistema chiede meno movimento, le animazioni Motion si spengono. */}
+      <MotionConfig reducedMotion="user">
+        <IconContext.Provider value={ICONS}>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <RouterProvider router={router} />
+            </AuthProvider>
+            <Toaster richColors closeButton />
+          </QueryClientProvider>
+        </IconContext.Provider>
+      </MotionConfig>
     </ThemeProvider>
   )
 }

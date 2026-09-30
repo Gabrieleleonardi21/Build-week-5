@@ -1,80 +1,78 @@
-import { SignOutIcon } from '@phosphor-icons/react'
+import { BellIcon, MicrophoneStageIcon, PlusIcon } from '@phosphor-icons/react'
 import { Link, NavLink } from 'react-router'
+import { MAIN_NAV } from '@/app/nav'
 import { useAuth } from '@/components/auth/auth-context'
 import { Button } from '@/components/ui/button'
-import { showError } from '@/lib/errors'
-import { hasRole } from '@/lib/roles'
 import { cn } from '@/lib/utils'
-
-interface NavItem {
-  to: string
-  label: string
-}
-
-const PUBLIC_NAV: readonly NavItem[] = [
-  { to: '/', label: 'Eventi' },
-  { to: '/map', label: 'Mappa' },
-  { to: '/artists', label: 'Artisti' },
-]
-
-const USER_NAV: readonly NavItem[] = [
-  { to: '/me/tickets', label: 'I miei ticket' },
-  { to: '/chats', label: 'Chat' },
-  { to: '/notifications', label: 'Notifiche' },
-]
+import { MobileNav } from './MobileNav'
+import { ThemeToggle } from './ThemeToggle'
+import { UserMenu } from './UserMenu'
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return cn(
-    'rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground',
-    isActive && 'bg-muted text-foreground',
+    'rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+    isActive && 'text-foreground font-medium',
   )
 }
 
-/** Intestazione provvisoria: la versione definitiva arriva con la direzione di design. */
+/** Intestazione di tutte le pagine: una riga sola, 64 px (skill design-taste §4.7). */
 export function SiteHeader() {
-  const { user, logout } = useAuth()
-  let items = PUBLIC_NAV
-  if (user !== null) {
-    items = [...PUBLIC_NAV, ...USER_NAV]
-  }
+  const { user, isLoading } = useAuth()
 
-  let account = (
-    <Button asChild size="sm">
-      <Link to="/login">Accedi</Link>
-    </Button>
-  )
-  if (user !== null) {
+  // Durante il primo caricamento non si mostrano ne' "Accedi" ne' l'avatar: niente sfarfallio.
+  let account = null
+  if (!isLoading && user === null) {
     account = (
-      <div className="flex items-center gap-2">
-        {hasRole(user, 'MODERATOR') && (
-          <NavLink to="/admin/users" className={navClass}>
-            Admin
-          </NavLink>
-        )}
-        <NavLink to="/profile" className={navClass}>
-          {user.firstName}
-        </NavLink>
-        <Button variant="ghost" size="icon" aria-label="Esci" onClick={() => logout().catch(showError)}>
-          <SignOutIcon />
+      <>
+        <Button asChild variant="ghost" className="hidden sm:inline-flex">
+          <Link to="/login">Accedi</Link>
         </Button>
-      </div>
+        <Button asChild>
+          <Link to="/register">Registrati</Link>
+        </Button>
+      </>
+    )
+  }
+  if (!isLoading && user !== null) {
+    account = (
+      <>
+        <Button asChild className="hidden sm:inline-flex">
+          <Link to="/events/new">
+            <PlusIcon data-icon="inline-start" aria-hidden="true" />
+            Crea evento
+          </Link>
+        </Button>
+        <Button asChild variant="ghost" size="icon-lg" className="pointer-coarse:size-11">
+          <Link to="/notifications" aria-label="Notifiche" title="Notifiche">
+            <BellIcon aria-hidden="true" />
+          </Link>
+        </Button>
+        <UserMenu user={user} />
+      </>
     )
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
-        <Link to="/" className="font-semibold tracking-tight">
+    <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4">
+        <MobileNav user={user} />
+        <Link to="/" className="mr-4 flex items-center gap-2 rounded-lg font-semibold tracking-tight outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+          <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground" aria-hidden="true">
+            <MicrophoneStageIcon weight="fill" size={18} />
+          </span>
           Eventi
         </Link>
         <nav aria-label="Principale" className="hidden items-center gap-1 md:flex">
-          {items.map((item) => (
+          {MAIN_NAV.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === '/'} className={navClass}>
               {item.label}
             </NavLink>
           ))}
         </nav>
-        {account}
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <ThemeToggle />
+          {account}
+        </div>
       </div>
     </header>
   )

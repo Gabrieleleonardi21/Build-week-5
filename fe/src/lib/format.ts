@@ -69,3 +69,8 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
   }
   return 'adesso'
 }
+
+/** Iniziali (es. "AB") per l'avatar quando la foto manca o non si carica. */
+export function initials(firstName: string, lastName: string): string {
+  return `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.toUpperCase()
+}

@@ -8,7 +8,7 @@ import { useAuth } from './auth-context'
 // Le guardie sono solo comodita' per l'utente: i permessi veri li applica il backend (401/403).
 
 function SessionLoading() {
-  return <Skeleton className="mx-auto mt-10 h-64 w-full max-w-5xl" />
+  return <Skeleton className="mx-auto mt-10 h-64 w-full max-w-7xl" />
 }
 
 function ServerDown({ onRetry }: { onRetry: () => void }) {
