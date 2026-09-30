@@ -1,7 +1,22 @@
 import 'leaflet/dist/leaflet.css'
-import type { ReactNode } from 'react'
-import { MapContainer, TileLayer } from 'react-leaflet'
+import { useEffect, type ReactNode } from 'react'
+import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { cn } from '@/lib/utils'
+
+/**
+ * Leaflet calcola le tessere sulla misura del contenitore al momento della creazione: se poi il
+ * contenitore cambia (griglia che si assesta, rotazione del telefono, tab) la mappa resta grigia.
+ * Qui si ricalcola a ogni cambio di misura.
+ */
+function KeepSizeInSync() {
+  const map = useMap()
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize())
+    observer.observe(map.getContainer())
+    return () => observer.disconnect()
+  }, [map])
+  return null
+}
 
 interface BaseMapProps {
   center: [number, number]
@@ -25,6 +40,7 @@ export function BaseMap({ center, zoom = 16, label, className, children }: BaseM
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <KeepSizeInSync />
         {children}
       </MapContainer>
     </div>

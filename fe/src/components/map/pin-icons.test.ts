@@ -19,3 +19,12 @@ describe('pin-icons', () => {
     expect(MARKER_LABELS).toEqual({ ENTRANCE: 'Ingresso', EXIT: 'Uscita', EMERGENCY_EXIT: 'Uscita di emergenza' })
   })
 })
+
+describe('venuePinIcon', () => {
+  it('ogni chiamata crea un elemento nuovo (condiviso tra marker resterebbe visibile solo sull\'ultimo)', () => {
+    const first = venuePinIcon().options.html
+    const second = venuePinIcon().options.html
+
+    expect(first).not.toBe(second)
+  })
+})

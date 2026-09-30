@@ -24,7 +24,10 @@ const MARKER_CLASSES: Readonly<Record<MarkerKind, string>> = {
   EMERGENCY_EXIT: 'map-marker map-marker--emergency',
 }
 
-/** Pin del luogo dell'evento (goccia con l'accento del tema). */
+/**
+ * Pin del luogo dell'evento (goccia con l'accento del tema).
+ * Una chiamata = un'icona per UN marker: l'elemento DOM dentro non si puo' condividere tra piu' marker.
+ */
 export function venuePinIcon(): L.DivIcon {
   const pin = make('div', { className: 'map-pin' }, [make('span', { className: 'map-pin__dot' })])
   return L.divIcon({ html: pin, className: 'map-icon', iconSize: [28, 36], iconAnchor: [14, 34], tooltipAnchor: [0, -30] })

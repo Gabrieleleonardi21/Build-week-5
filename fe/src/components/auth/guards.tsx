@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { safeReturnPath } from '@/lib/navigation'
 import { hasRole } from '@/lib/roles'
 import type { Role } from '@/lib/types'
 import { useAuth } from './auth-context'
@@ -57,14 +58,19 @@ export function RequireRole({ min }: { min: Role }) {
   return <Outlet />
 }
 
-/** Login e registrazione: chi e' gia' loggato va alla home. */
+/**
+ * Login e registrazione: chi e' gia' loggato non ci resta. Va alla pagina chiesta prima del login
+ * (state.from) o alla home: appena il login riesce questa guardia scatta insieme al redirect della
+ * pagina, e devono portare nello stesso posto.
+ */
 export function RequireGuest() {
   const { user, isLoading } = useAuth()
+  const location = useLocation()
   if (isLoading) {
     return <SessionLoading />
   }
   if (user !== null) {
-    return <Navigate to="/" replace />
+    return <Navigate to={safeReturnPath(location.state)} replace />
   }
   return <Outlet />
 }
