@@ -45,7 +45,7 @@ describe('guardie e layout', () => {
   it('area admin: USER torna alla home, MODERATOR entra', async () => {
     loggedAs(user('USER'))
     const first = renderRoute('/admin/users')
-    expect(await screen.findByRole('heading', { name: 'Eventi' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Scopri gli eventi dal vivo in Italia' })).toBeInTheDocument()
     first.unmount()
 
     loggedAs(user('MODERATOR'))
@@ -59,7 +59,7 @@ describe('guardie e layout', () => {
     loggedAs(user())
     renderRoute('/login')
 
-    expect(await screen.findByRole('heading', { name: 'Eventi' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Scopri gli eventi dal vivo in Italia' })).toBeInTheDocument()
   })
 
   it('backend irraggiungibile: nessun redirect, proposta di riprovare', async () => {

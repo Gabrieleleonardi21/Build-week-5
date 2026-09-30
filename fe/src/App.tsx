@@ -25,7 +25,15 @@ function App() {
 
   return (
     // Tema chiaro/scuro con la classe .dark (token di shadcn); di default segue il sistema.
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    // Il tema iniziale lo applica public/theme-init.js prima di React: lo script di next-themes
+    // e' inutile in un'app solo client, e con type non eseguibile React non avvisa piu'.
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      scriptProps={{ type: 'application/json' }}
+    >
       {/* reducedMotion="user": se il sistema chiede meno movimento, le animazioni Motion si spengono. */}
       <MotionConfig reducedMotion="user">
         <IconContext.Provider value={ICONS}>

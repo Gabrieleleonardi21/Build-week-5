@@ -167,6 +167,10 @@
       min-height: 2.75rem;
       min-width: 2.75rem;
     }
+    [data-slot="input"],
+    [data-slot="select-trigger"] {
+      min-height: 2.75rem;
+    }
   }
   .dark {
     color-scheme: dark;

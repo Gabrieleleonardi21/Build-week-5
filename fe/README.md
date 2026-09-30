@@ -38,6 +38,16 @@ Crea 8 utenti, 10 artisti, 10 eventi in città italiane (con foto, scaletta, ing
 - `src/features/<nome>/`: una cartella per funzionalità con `api.ts`, `schemas.ts`, `hooks/`, `components/`, `pages/` e `routes.tsx`.
   Le rotte si dichiarano nel `routes.tsx` della feature, divise per guardia (`public`, `guest`, `auth`, `admin`).
 
+## Pagina di riferimento: `features/events/pages/DiscoverPage.tsx`
+
+Per ogni nuova pagina con una lista seguire lo stesso schema:
+
+1. `features/<nome>/api.ts`: funzione endpoint + chiavi della cache (`eventKeys.list(params)`).
+2. `hooks/useX.ts`: `useQuery` con `placeholderData: keepPreviousData` (niente salti cambiando pagina).
+3. Filtri e pagina nell'URL con `useUrlFilters(['q', 'city'])` (URL condivisibile, Indietro funziona).
+4. `QueryState` con skeleton della stessa forma, `EmptyState` per il vuoto, `Pagination` in fondo.
+5. Test con MSW (`DiscoverPage.test.tsx`): dati, filtri nell'URL e nella richiesta, vuoto, errore, paginazione.
+
 ## Regole (controllate da ESLint)
 
 - Niente operatori ternari: calcolare il valore prima del JSX con `if/else`.

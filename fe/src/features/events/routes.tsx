@@ -1,10 +1,12 @@
 import type { FeatureRoutes } from '@/app/feature-routes'
 import { placeholderRoute } from '@/app/placeholder-route'
+import { DiscoverPage } from './pages/DiscoverPage'
 
 // Traccia T2 (scoperta) e T3 (organizzatore). Endpoint: /api/events, /api/events/map, /api/me/events.
 export const eventRoutes: FeatureRoutes = {
   public: [
-    placeholderRoute('/', 'Eventi', 'Elenco degli eventi con ricerca per testo e città (GET /api/events).'),
+    // Home: importata subito (non lazy), e' la prima pagina che si apre.
+    { path: '/', element: <DiscoverPage /> },
     placeholderRoute('/map', 'Mappa eventi', 'Eventi sulla mappa (GET /api/events/map, react-leaflet).'),
     placeholderRoute('/events/:id', 'Dettaglio evento', 'Foto, scaletta, mappa con ingressi e uscite, iscrizione.'),
   ],
