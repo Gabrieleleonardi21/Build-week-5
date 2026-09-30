@@ -2,6 +2,8 @@
 
 React 19 + TypeScript + Vite, Tailwind 4 + shadcn/ui (icone Phosphor), TanStack Query, react-hook-form + zod, react-router, react-leaflet, STOMP.
 
+Stato del progetto e chi fa cosa: [`../docs/STATO.md`](../docs/STATO.md).
+
 Regole di comunicazione col backend (sessione, CSRF, errori, upload, tempo reale): [`../docs/API.md`](../docs/API.md).
 Endpoint: [`../docs/openapi.yaml`](../docs/openapi.yaml), da cui si generano i tipi in `src/lib/api-schema.ts`.
 
