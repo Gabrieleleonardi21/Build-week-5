@@ -1,0 +1,1497 @@
+openapi: 3.0.3
+info:
+  title: Piattaforma eventi — API backend
+  version: "1.0"
+  description: |
+    Backend della Build Week 5 (Spring Boot, sessione server-side, STOMP).
+    Aprire in https://editor.swagger.io (File → Import file).
+
+    **Regole comuni** (dettagli ed esempi in `docs/API.md`):
+    - ogni richiesta con `credentials: "include"` / `withCredentials: true` (cookie `SESSION`);
+    - su POST/PUT/PATCH/DELETE header `X-XSRF-TOKEN` preso da `GET /api/auth/csrf` (da rifare dopo il login);
+    - errori sempre in formato `ProblemDetail`; liste paginate `{ content, page }` con `size` massimo 50;
+    - notifiche e chat in tempo reale via STOMP su `/ws` (non descritte qui: vedi `docs/API.md` §8).
+
+    **Provarle da Swagger Editor:** non funziona (cookie di sessione e CSRF su un altro dominio).
+    Per provarle usare il frontend, oppure curl con `-c/-b cookie.txt` e l'header CSRF.
+servers:
+  - url: http://localhost:8080
+    description: Locale
+  - url: https://eventi-be.onrender.com
+    description: Render (sostituire con l'URL reale del backend)
+
+tags:
+  - name: Auth
+    description: Registrazione, verifica email, login, sessione
+  - name: Eventi
+    description: Eventi pubblici, mappa, gestione dei propri eventi
+  - name: Immagini
+    description: Foto evento e locandine della scaletta (Cloudinary)
+  - name: AI
+    description: Proposta di descrizione dell'evento
+  - name: Artisti
+  - name: Ticket
+    description: Iscrizione agli eventi e partecipanti
+  - name: Notifiche
+  - name: Amicizie
+  - name: Chat
+    description: Storico e letture (l'invio dei messaggi è via STOMP)
+  - name: Profilo
+    description: Dati dell'utente loggato (/api/me)
+  - name: Utenti
+    description: Ricerca pubblica degli utenti (solo loggati)
+  - name: Admin
+    description: Moderazione degli account (MODERATOR / SUPERADMIN)
+  - name: Sistema
+
+# Di default ogni endpoint richiede la sessione; quelli pubblici hanno `security: []`.
+security:
+  - sessionCookie: []
+
+paths:
+  # ---------------------------------------------------------------- Auth
+  /api/auth/csrf:
+    get:
+      tags: [Auth]
+      summary: Token CSRF da mandare in X-XSRF-TOKEN
+      description: Da chiamare all'avvio e di nuovo dopo il login (il token cambia).
+      security: []
+      responses:
+        "200":
+          description: Token corrente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CsrfTokenResponse" }
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrazione (manda un codice di verifica via email)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: Utente creato, stato PENDING_VERIFICATION
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/auth/verify:
+    post:
+      tags: [Auth]
+      summary: Verifica l'email con il codice di 6 cifre
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyRequest" }
+      responses:
+        "204": { description: "Account attivo, ora si può fare login" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  /api/auth/resend-code:
+    post:
+      tags: [Auth]
+      summary: Invia un nuovo codice di verifica
+      description: Risponde 204 anche se l'email non esiste (non rivela chi è registrato). Massimo 3 ogni 15 minuti.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResendCodeRequest" }
+      responses:
+        "204": { description: Richiesta accettata }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (crea la sessione)
+      description: Dopo il 200 rifare `GET /api/auth/csrf`. Limite 5 tentativi per email e 30 per IP ogni 15 minuti.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Login riuscito
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "Account non attivo: `code` = EMAIL_NOT_VERIFIED oppure ACCOUNT_DEACTIVATED"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/AccountNotActiveProblem" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Utente della sessione (200 = loggato, 401 = no)
+      responses:
+        "200":
+          description: Utente loggato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (invalida la sessione)
+      responses:
+        "204": { description: Sessione chiusa }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ---------------------------------------------------------------- Eventi
+  /api/events:
+    get:
+      tags: [Eventi]
+      summary: Eventi pubblicati e non ancora finiti, dal più vicino
+      security: []
+      parameters:
+        - { name: q, in: query, description: Testo nel titolo, schema: { type: string } }
+        - { name: city, in: query, description: "Città (uguale, senza maiuscole)", schema: { type: string } }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di eventi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageEventSummary" }
+    post:
+      tags: [Eventi]
+      summary: Crea un evento (il proprietario è l'utente loggato)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EventRequest" }
+      responses:
+        "201":
+          description: Evento creato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/events/map:
+    get:
+      tags: [Eventi]
+      summary: Segnaposto per la mappa pubblica (array, massimo 500)
+      security: []
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: city, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Segnaposto
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/EventPinResponse" }
+  /api/events/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Eventi]
+      summary: Dettaglio evento (visibile anche se annullato)
+      security: []
+      responses:
+        "200":
+          description: Evento
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Eventi]
+      summary: Modifica un evento (proprietario o MODERATOR)
+      description: |
+        Sostituisce tutto, scaletta e marker compresi (lista vuota o assente = nessuno).
+        L'ordine di `lineup` è l'ordine della serata. I partecipanti ricevono una notifica EVENT_UPDATED.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EventRequest" }
+      responses:
+        "200":
+          description: Evento aggiornato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Eventi]
+      summary: Cancella un evento senza partecipanti
+      description: Con ticket validi risponde 409 — in quel caso l'evento si annulla con /cancel.
+      responses:
+        "204": { description: Evento cancellato (anche le sue immagini su Cloudinary) }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/events/{id}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [Eventi]
+      summary: Annulla un evento (resta visibile come CANCELLED)
+      description: I partecipanti ricevono una notifica EVENT_CANCELLED. Ripetere la chiamata non fa nulla.
+      responses:
+        "204": { description: Evento annullato }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/me/events:
+    get:
+      tags: [Eventi]
+      summary: Eventi creati dall'utente (anche passati e annullati)
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di eventi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageEventSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------------------------------------------------------- Immagini
+  /api/events/{id}/images:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [Immagini]
+      summary: Aggiunge una foto all'evento (massimo 10; la prima è la copertina)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ImageUpload" }
+      responses:
+        "201":
+          description: Foto caricata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventImageResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+  /api/events/{id}/images/{imageId}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - { name: imageId, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [Immagini]
+      summary: Toglie una foto (la successiva diventa copertina)
+      responses:
+        "204": { description: Foto rimossa }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/events/{id}/lineup/{artistId}/poster:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - { name: artistId, in: path, required: true, description: "`lineup[].artistId` dell'evento", schema: { type: string, format: uuid } }
+    post:
+      tags: [Immagini]
+      summary: Carica o sostituisce la locandina di un artista in scaletta
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ImageUpload" }
+      responses:
+        "200":
+          description: Riga di scaletta aggiornata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LineupEntryResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+    delete:
+      tags: [Immagini]
+      summary: Toglie la locandina
+      responses:
+        "204": { description: Locandina rimossa }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- AI
+  /api/events/{id}/ai-description:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [AI]
+      summary: Propone una descrizione migliore (non la salva)
+      description: |
+        Usa il testo inviato (o, se vuoto, la descrizione salvata) e la copertina.
+        La proposta si applica con la PUT dell'evento. Mostrarla con textContent, mai come HTML.
+        Modelli gratuiti: 503 frequente nei momenti di punta → pulsante "Riprova".
+        Massimo 10 proposte riuscite ogni 15 minuti per utente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiDescriptionRequest" }
+      responses:
+        "200":
+          description: Proposta
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiDescriptionResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+
+  # ---------------------------------------------------------------- Artisti
+  /api/artists:
+    get:
+      tags: [Artisti]
+      summary: Cerca artisti per nome
+      security: []
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di artisti
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageArtist" }
+    post:
+      tags: [Artisti]
+      summary: Crea un artista (qualsiasi utente loggato)
+      description: Gli artisti si creano anche da soli indicandoli per nome nella scaletta di un evento.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArtistRequest" }
+      responses:
+        "201":
+          description: Artista creato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtistResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/artists/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Artisti]
+      summary: Dettaglio artista
+      security: []
+      responses:
+        "200":
+          description: Artista
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtistResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Artisti]
+      summary: Modifica un artista (MODERATOR)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArtistRequest" }
+      responses:
+        "200":
+          description: Artista aggiornato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtistResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Artisti]
+      summary: Cancella un artista non presente in nessuna scaletta (MODERATOR)
+      responses:
+        "204": { description: Artista cancellato }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  # ---------------------------------------------------------------- Ticket
+  /api/events/{eventId}/tickets:
+    parameters:
+      - $ref: "#/components/parameters/EventId"
+    post:
+      tags: [Ticket]
+      summary: Iscrizione all'evento (arriva il ticket via email)
+      responses:
+        "201":
+          description: Ticket emesso
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Già iscritto, oppure evento al completo
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+  /api/events/{eventId}/tickets/me:
+    parameters:
+      - $ref: "#/components/parameters/EventId"
+    get:
+      tags: [Ticket]
+      summary: Il mio ticket per questo evento
+      responses:
+        "200":
+          description: Ticket
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Ticket]
+      summary: Annulla la mia iscrizione (prima dell'inizio)
+      responses:
+        "204": { description: Iscrizione annullata }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/events/{eventId}/participants:
+    parameters:
+      - $ref: "#/components/parameters/EventId"
+    get:
+      tags: [Ticket]
+      summary: Partecipanti (li vedono proprietario, moderatori e gli altri partecipanti)
+      description: Serve a mandare richieste di amicizia a chi partecipa allo stesso evento.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di partecipanti
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageParticipant" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/me/tickets:
+    get:
+      tags: [Ticket]
+      summary: I miei ticket validi
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di ticket
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageTicket" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------------------------------------------------------- Notifiche
+  /api/notifications:
+    get:
+      tags: [Notifiche]
+      summary: Le mie notifiche, dalla più recente
+      description: Le nuove arrivano anche in tempo reale su STOMP `/user/queue/notifications`.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di notifiche
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageNotification" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/notifications/unread-count:
+    get:
+      tags: [Notifiche]
+      summary: Numero di notifiche non lette (badge)
+      responses:
+        "200":
+          description: Contatore
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnreadCountResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/notifications/{id}/read:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      tags: [Notifiche]
+      summary: Segna una notifica come letta
+      responses:
+        "204": { description: Letta }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/events/{eventId}/messages:
+    parameters:
+      - $ref: "#/components/parameters/EventId"
+    post:
+      tags: [Notifiche]
+      summary: Messaggio del proprietario a tutti i partecipanti (notifica OWNER_MESSAGE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OwnerMessageRequest" }
+      responses:
+        "204": { description: Inviato }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- Amicizie
+  /api/friendships:
+    get:
+      tags: [Amicizie]
+      summary: I miei amici (amicizie ACCEPTED)
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di amici
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageFriend" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Amicizie]
+      summary: Richiesta di amicizia a un altro partecipante dello stesso evento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FriendRequestCreate" }
+      responses:
+        "201":
+          description: Richiesta inviata (notifica FRIEND_REQUEST al destinatario)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FriendRequestResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/friendships/requests/received:
+    get:
+      tags: [Amicizie]
+      summary: Richieste ricevute in attesa
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di richieste
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageFriendRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/friendships/requests/sent:
+    get:
+      tags: [Amicizie]
+      summary: Richieste inviate in attesa
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di richieste
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageFriendRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/friendships/{id}/accept:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [Amicizie]
+      summary: Accetta una richiesta ricevuta (notifica FRIEND_ACCEPTED al mittente)
+      responses:
+        "200":
+          description: Nuovo amico
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FriendResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/friendships/{id}/reject:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [Amicizie]
+      summary: Rifiuta una richiesta ricevuta
+      responses:
+        "204": { description: Rifiutata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/friendships/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    delete:
+      tags: [Amicizie]
+      summary: Toglie un amico o ritira una richiesta inviata
+      description: Lo storico della chat resta leggibile, ma non si possono più mandare messaggi.
+      responses:
+        "204": { description: Rimossa }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- Chat
+  /api/chats:
+    get:
+      tags: [Chat]
+      summary: Inbox con l'ultimo messaggio e i non letti per ogni chat
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di chat
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageChatSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/chats/{id}/messages:
+    parameters:
+      - { name: id, in: path, required: true, description: "id dell'amicizia (`chatId` / `friendshipId`)", schema: { type: string, format: uuid } }
+    get:
+      tags: [Chat]
+      summary: Storico dei messaggi, dal più recente
+      description: I messaggi nuovi arrivano via STOMP su `/user/queue/chat`; si inviano con `/app/chat.send`.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - { name: size, in: query, schema: { type: integer, default: 30, minimum: 1, maximum: 50 } }
+      responses:
+        "200":
+          description: Pagina di messaggi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageChatMessage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/chats/{id}/read:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Chat]
+      summary: Segna come letti i messaggi ricevuti in questa chat
+      responses:
+        "204": { description: Letti }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- Profilo
+  /api/me:
+    get:
+      tags: [Profilo]
+      summary: Il mio profilo completo
+      responses:
+        "200":
+          description: Profilo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfileResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      tags: [Profilo]
+      summary: Modifica i dati anagrafici (l'email non si cambia)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateProfileRequest" }
+      responses:
+        "200":
+          description: Profilo aggiornato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfileResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [Profilo]
+      summary: Elimina l'account (anonimizzazione, D15)
+      description: Chiede la password. Chiude tutte le sessioni; l'avatar viene cancellato da Cloudinary.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeleteAccountRequest" }
+      responses:
+        "204": { description: Account eliminato }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  /api/me/password:
+    put:
+      tags: [Profilo]
+      summary: Cambia password (le altre sessioni vengono chiuse)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangePasswordRequest" }
+      responses:
+        "204": { description: Password cambiata }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  /api/me/avatar:
+    post:
+      tags: [Profilo]
+      summary: Carica o sostituisce l'avatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ImageUpload" }
+      responses:
+        "200":
+          description: Profilo con il nuovo avatarUrl
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfileResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+    delete:
+      tags: [Profilo]
+      summary: Toglie l'avatar
+      responses:
+        "204": { description: Avatar rimosso }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- Utenti
+  /api/users:
+    get:
+      tags: [Utenti]
+      summary: Cerca utenti attivi per nome e cognome (almeno 2 caratteri)
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 2 } }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di utenti
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageUserSummary" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Utenti]
+      summary: Profilo pubblico di un utente
+      responses:
+        "200":
+          description: Utente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserSummaryResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- Admin
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: Elenco account con filtri (MODERATOR)
+      parameters:
+        - { name: q, in: query, description: "Email, nome o cognome", schema: { type: string } }
+        - { name: role, in: query, schema: { $ref: "#/components/schemas/Role" } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/UserStatus" } }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Pagina di account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageAdminUser" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/admin/users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Admin]
+      summary: Dettaglio account (MODERATOR)
+      responses:
+        "200":
+          description: Account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUserResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/admin/users/{id}/role:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      tags: [Admin]
+      summary: Cambia il ruolo di un account (solo SUPERADMIN, non il proprio)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoleChangeRequest" }
+      responses:
+        "200":
+          description: Account aggiornato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUserResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/admin/users/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      tags: [Admin]
+      summary: Attiva o disattiva un account (MODERATOR solo su USER; SUPERADMIN su tutti tranne sé)
+      description: Disattivare chiude subito le sessioni dell'utente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StatusChangeRequest" }
+      responses:
+        "200":
+          description: Account aggiornato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUserResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- Sistema
+  /api/stato:
+    get:
+      tags: [Sistema]
+      summary: Stato del servizio e del database
+      security: []
+      responses:
+        "200":
+          description: Servizio attivo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  servizio: { type: string, example: attivo }
+                  database: { type: string, example: eventi }
+                  ora: { type: string, format: date-time }
+  /actuator/health:
+    get:
+      tags: [Sistema]
+      summary: Health check (usato da Render)
+      security: []
+      responses:
+        "200":
+          description: UP
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: UP }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Cookie di sessione impostato dal login (HttpOnly). Serve `credentials include` nel frontend.
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      description: Numero di pagina, da 0
+      schema: { type: integer, default: 0, minimum: 0 }
+    Size:
+      name: size
+      in: query
+      description: Elementi per pagina (valori oltre 50 vengono ridotti a 50)
+      schema: { type: integer, default: 20, minimum: 1, maximum: 50 }
+
+  responses:
+    BadRequest:
+      description: Dati non validi (con `errors` campo → messaggio) o operazione non ammessa
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ValidationProblem" }
+    Unauthorized:
+      description: Non loggato (o credenziali sbagliate nel login)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+    Forbidden:
+      description: Senza permesso, oppure header X-XSRF-TOKEN mancante o scaduto
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+    NotFound:
+      description: Non esiste o non è visibile all'utente
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+    Conflict:
+      description: Conflitto con lo stato attuale
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+    PayloadTooLarge:
+      description: File oltre i 5 MB
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+    TooManyRequests:
+      description: Troppe richieste; riprovare dopo i secondi indicati
+      headers:
+        Retry-After:
+          description: Secondi di attesa
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+    ServiceUnavailable:
+      description: Servizio esterno non disponibile (es. AI satura o non configurata)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  schemas:
+    # ---------- comuni
+    ProblemDetail:
+      type: object
+      properties:
+        type: { type: string, example: "about:blank" }
+        title: { type: string, example: Bad Request }
+        status: { type: integer, example: 400 }
+        detail: { type: string, example: "La data di inizio deve essere nel futuro", description: Messaggio in italiano da mostrare }
+        instance: { type: string, example: /api/events }
+    ValidationProblem:
+      allOf:
+        - $ref: "#/components/schemas/ProblemDetail"
+        - type: object
+          properties:
+            errors:
+              type: object
+              description: Presente solo per errori di validazione dei campi
+              additionalProperties: { type: string }
+              example: { province: "La provincia e' una sigla di 2 lettere" }
+    AccountNotActiveProblem:
+      allOf:
+        - $ref: "#/components/schemas/ProblemDetail"
+        - type: object
+          properties:
+            code: { type: string, enum: [EMAIL_NOT_VERIFIED, ACCOUNT_DEACTIVATED] }
+    PageMeta:
+      type: object
+      properties:
+        size: { type: integer, example: 20 }
+        number: { type: integer, example: 0 }
+        totalElements: { type: integer, format: int64, example: 42 }
+        totalPages: { type: integer, example: 3 }
+    ImageUpload:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: JPEG, PNG o WebP, massimo 5 MB
+    CsrfTokenResponse:
+      type: object
+      properties:
+        headerName: { type: string, example: X-XSRF-TOKEN }
+        token: { type: string }
+
+    # ---------- enum
+    Role: { type: string, enum: [USER, MODERATOR, SUPERADMIN] }
+    UserStatus: { type: string, enum: [PENDING_VERIFICATION, ACTIVE, DEACTIVATED] }
+    EventStatus: { type: string, enum: [PUBLISHED, CANCELLED] }
+    TicketStatus: { type: string, enum: [VALID, CANCELLED] }
+    MarkerKind: { type: string, enum: [ENTRANCE, EXIT, EMERGENCY_EXIT] }
+    NotificationType:
+      type: string
+      enum: [EVENT_UPDATED, EVENT_CANCELLED, OWNER_MESSAGE, NEW_PARTICIPANT, FRIEND_REQUEST, FRIEND_ACCEPTED]
+
+    # ---------- auth
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName, birthDate, privacyAccepted]
+      properties:
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, minLength: 8, maxLength: 72 }
+        firstName: { type: string, maxLength: 100 }
+        lastName: { type: string, maxLength: 100 }
+        birthDate: { type: string, format: date, description: Nel passato }
+        privacyAccepted: { type: boolean, description: Deve essere true }
+    VerifyRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email: { type: string, format: email }
+        code: { type: string, pattern: "^[0-9]{6}$", example: "482913" }
+    ResendCodeRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, maxLength: 72 }
+    UserResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { $ref: "#/components/schemas/Role" }
+        avatarUrl: { type: string, nullable: true }
+
+    # ---------- eventi
+    EventRequest:
+      type: object
+      required: [title, startsAt, address, city, latitude, longitude]
+      properties:
+        title: { type: string, maxLength: 150 }
+        description: { type: string, maxLength: 10000, nullable: true }
+        startsAt: { type: string, format: date-time, description: Nel futuro (in modifica si può lasciare quella già salvata) }
+        endsAt: { type: string, format: date-time, nullable: true, description: Non prima di startsAt }
+        venueName: { type: string, maxLength: 150, nullable: true }
+        address: { type: string, maxLength: 255 }
+        city: { type: string, maxLength: 100 }
+        province: { type: string, pattern: "^([A-Za-z]{2})?$", nullable: true, example: MI }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        maxParticipants: { type: integer, minimum: 1, nullable: true, description: null = senza limite; non sotto gli iscritti attuali }
+        lineup:
+          type: array
+          maxItems: 30
+          nullable: true
+          description: In ordine di esibizione; artisti indicati per nome (creati se non esistono), senza ripetizioni
+          items: { $ref: "#/components/schemas/LineupEntryRequest" }
+        markers:
+          type: array
+          maxItems: 30
+          nullable: true
+          items: { $ref: "#/components/schemas/MarkerRequest" }
+    LineupEntryRequest:
+      type: object
+      required: [artistName]
+      properties:
+        artistName: { type: string, maxLength: 150 }
+        performanceStart: { type: string, format: date-time, nullable: true }
+        performanceEnd: { type: string, format: date-time, nullable: true }
+    MarkerRequest:
+      type: object
+      required: [kind, latitude, longitude]
+      properties:
+        kind: { $ref: "#/components/schemas/MarkerKind" }
+        label: { type: string, maxLength: 100, nullable: true }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+    EventSummaryResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time, nullable: true }
+        venueName: { type: string, nullable: true }
+        city: { type: string }
+        province: { type: string, nullable: true }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        status: { $ref: "#/components/schemas/EventStatus" }
+        coverUrl: { type: string, nullable: true, description: Prima immagine dell'evento }
+    EventPinResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        startsAt: { type: string, format: date-time }
+        city: { type: string }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+    EventResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time, nullable: true }
+        venueName: { type: string, nullable: true }
+        address: { type: string }
+        city: { type: string }
+        province: { type: string, nullable: true }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        maxParticipants: { type: integer, nullable: true }
+        participants: { type: integer, format: int64, description: Ticket validi }
+        status: { $ref: "#/components/schemas/EventStatus" }
+        owner: { $ref: "#/components/schemas/OwnerResponse" }
+        images:
+          type: array
+          items: { $ref: "#/components/schemas/EventImageResponse" }
+        lineup:
+          type: array
+          description: Ordinata per performanceOrder
+          items: { $ref: "#/components/schemas/LineupEntryResponse" }
+        markers:
+          type: array
+          items: { $ref: "#/components/schemas/MarkerResponse" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    OwnerResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        firstName: { type: string }
+        lastName: { type: string }
+        avatarUrl: { type: string, nullable: true }
+    EventImageResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string }
+        sortOrder: { type: integer, description: 0 = copertina }
+    LineupEntryResponse:
+      type: object
+      properties:
+        artistId: { type: string, format: uuid }
+        artistName: { type: string }
+        genre: { type: string, nullable: true }
+        imageUrl: { type: string, nullable: true }
+        performanceOrder: { type: integer, description: 1 = apre la serata }
+        performanceStart: { type: string, format: date-time, nullable: true }
+        performanceEnd: { type: string, format: date-time, nullable: true }
+        posterUrl: { type: string, nullable: true }
+    MarkerResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/MarkerKind" }
+        label: { type: string, nullable: true }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+    AiDescriptionRequest:
+      type: object
+      properties:
+        text: { type: string, maxLength: 10000, nullable: true, description: Bozza da migliorare; vuota = descrizione salvata }
+    AiDescriptionResponse:
+      type: object
+      properties:
+        proposal: { type: string, description: "Testo generato, da mostrare con textContent" }
+
+    # ---------- artisti
+    ArtistRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 150, description: Unico senza distinguere maiuscole }
+        genre: { type: string, maxLength: 100, nullable: true }
+        bio: { type: string, maxLength: 5000, nullable: true }
+        imageUrl: { type: string, maxLength: 500, nullable: true, description: Solo link http o https }
+    ArtistResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        genre: { type: string, nullable: true }
+        bio: { type: string, nullable: true }
+        imageUrl: { type: string, nullable: true }
+
+    # ---------- ticket
+    TicketResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, description: Codice del ticket (anche nell'email) }
+        status: { $ref: "#/components/schemas/TicketStatus" }
+        issuedAt: { type: string, format: date-time }
+        event: { $ref: "#/components/schemas/EventSummaryResponse" }
+    ParticipantResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid, description: "id utente, da usare come addresseeId" }
+        firstName: { type: string }
+        lastName: { type: string }
+        avatarUrl: { type: string, nullable: true }
+
+    # ---------- notifiche
+    NotificationResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/NotificationType" }
+        title: { type: string }
+        body: { type: string }
+        eventId: { type: string, format: uuid, nullable: true }
+        readAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+    UnreadCountResponse:
+      type: object
+      properties:
+        unread: { type: integer, format: int64 }
+    OwnerMessageRequest:
+      type: object
+      required: [title, body]
+      properties:
+        title: { type: string, maxLength: 150 }
+        body: { type: string, maxLength: 5000 }
+
+    # ---------- amicizie e chat
+    UserSummaryResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        firstName: { type: string }
+        lastName: { type: string }
+        avatarUrl: { type: string, nullable: true }
+    FriendRequestCreate:
+      type: object
+      required: [addresseeId, eventId]
+      properties:
+        addresseeId: { type: string, format: uuid, description: Utente a cui chiedere l'amicizia }
+        eventId: { type: string, format: uuid, description: Evento a cui partecipate entrambi }
+    FriendRequestResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user: { $ref: "#/components/schemas/UserSummaryResponse" }
+        eventId: { type: string, format: uuid, nullable: true }
+        eventTitle: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    FriendResponse:
+      type: object
+      properties:
+        friendshipId: { type: string, format: uuid, description: È anche l'id della chat }
+        friend: { $ref: "#/components/schemas/UserSummaryResponse" }
+        since: { type: string, format: date-time }
+        unreadMessages: { type: integer, format: int64 }
+    ChatMessageResponse:
+      type: object
+      description: Stesso formato dei messaggi ricevuti via STOMP su /user/queue/chat
+      properties:
+        id: { type: string, format: uuid }
+        friendshipId: { type: string, format: uuid }
+        senderId: { type: string, format: uuid }
+        content: { type: string, maxLength: 2000 }
+        sentAt: { type: string, format: date-time }
+        readAt: { type: string, format: date-time, nullable: true }
+    ChatSummaryResponse:
+      type: object
+      properties:
+        chatId: { type: string, format: uuid }
+        user: { $ref: "#/components/schemas/UserSummaryResponse" }
+        canWrite: { type: boolean, description: false se l'amicizia è stata tolta o l'altro account non è attivo }
+        lastMessage:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/ChatMessageResponse"
+          nullable: true
+        unreadMessages: { type: integer, format: int64 }
+
+    # ---------- profilo
+    AddressDto:
+      type: object
+      nullable: true
+      properties:
+        street: { type: string, maxLength: 255, nullable: true }
+        city: { type: string, maxLength: 100, nullable: true }
+        postalCode: { type: string, pattern: "^[0-9A-Za-z -]{0,10}$", nullable: true }
+        province: { type: string, pattern: "^([A-Za-z]{2})?$", nullable: true }
+        country: { type: string, pattern: "^([A-Za-z]{2})?$", nullable: true, example: IT }
+    ProfileResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        birthDate: { type: string, format: date }
+        address: { $ref: "#/components/schemas/AddressDto" }
+        phone: { type: string, nullable: true }
+        avatarUrl: { type: string, nullable: true }
+        role: { $ref: "#/components/schemas/Role" }
+        createdAt: { type: string, format: date-time }
+    UpdateProfileRequest:
+      type: object
+      required: [firstName, lastName, birthDate]
+      properties:
+        firstName: { type: string, maxLength: 100 }
+        lastName: { type: string, maxLength: 100 }
+        birthDate: { type: string, format: date }
+        phone: { type: string, maxLength: 30, pattern: "^(\\+?[0-9 ]{6,29})?$", nullable: true }
+        address: { $ref: "#/components/schemas/AddressDto" }
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, maxLength: 72 }
+        newPassword: { type: string, minLength: 8, maxLength: 72 }
+    DeleteAccountRequest:
+      type: object
+      required: [password]
+      properties:
+        password: { type: string, maxLength: 72 }
+
+    # ---------- admin
+    AdminUserResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { $ref: "#/components/schemas/Role" }
+        status: { $ref: "#/components/schemas/UserStatus" }
+        emailVerifiedAt: { type: string, format: date-time, nullable: true }
+        anonymizedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+    RoleChangeRequest:
+      type: object
+      required: [role]
+      properties:
+        role: { $ref: "#/components/schemas/Role" }
+    StatusChangeRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ACTIVE, DEACTIVATED]
+
+    # ---------- pagine (content + page)
+    PageEventSummary:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/EventSummaryResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageArtist:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/ArtistResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageTicket:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/TicketResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageParticipant:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/ParticipantResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageNotification:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/NotificationResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageFriend:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/FriendResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageFriendRequest:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/FriendRequestResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageChatSummary:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/ChatSummaryResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageChatMessage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/ChatMessageResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageUserSummary:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/UserSummaryResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
+    PageAdminUser:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/AdminUserResponse" } }
+        page: { $ref: "#/components/schemas/PageMeta" }
