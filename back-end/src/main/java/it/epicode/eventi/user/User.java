@@ -54,6 +54,10 @@ public class User {
 	@Column(length = 500)
 	private String avatarUrl;
 
+	// public_id Cloudinary: serve per cancellare il file quando l'avatar cambia o l'account si elimina.
+	@Column(length = 255)
+	private String avatarStorageKey;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
 	private Role role = Role.USER;
@@ -117,6 +121,9 @@ public class User {
 
 	public String getAvatarUrl() { return avatarUrl; }
 	public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+	public String getAvatarStorageKey() { return avatarStorageKey; }
+	public void setAvatarStorageKey(String avatarStorageKey) { this.avatarStorageKey = avatarStorageKey; }
 
 	public Role getRole() { return role; }
 	public void setRole(Role role) { this.role = role; }

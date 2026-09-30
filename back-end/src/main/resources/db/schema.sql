@@ -35,6 +35,7 @@ CREATE TABLE users (
     address_country     VARCHAR(2)   DEFAULT 'IT',
     phone               VARCHAR(30),
     avatar_url          VARCHAR(500),
+    avatar_storage_key  VARCHAR(255),                  -- public_id Cloudinary, per cancellare il file (D06, D15)
     role                VARCHAR(20)  NOT NULL DEFAULT 'USER',
     status              VARCHAR(30)  NOT NULL DEFAULT 'PENDING_VERIFICATION',
     email_verified_at   TIMESTAMPTZ,
@@ -44,7 +45,7 @@ CREATE TABLE users (
     updated_at          TIMESTAMPTZ  NOT NULL DEFAULT now(),
 
     CONSTRAINT uq_users_email   UNIQUE (email),
-    CONSTRAINT chk_users_role   CHECK (role IN ('USER', 'ADMIN')),
+    CONSTRAINT chk_users_role   CHECK (role IN ('USER', 'MODERATOR', 'SUPERADMIN')),
     CONSTRAINT chk_users_status CHECK (status IN ('PENDING_VERIFICATION', 'ACTIVE', 'DEACTIVATED'))
 );
 
@@ -115,10 +116,23 @@ CREATE TABLE artists (
 -- find-or-create per nome, senza duplicati tipo "Caparezza" / "caparezza" (D07)
 CREATE UNIQUE INDEX uq_artists_name_ci ON artists (lower(name));
 
+-- Scaletta della serata: quali artisti, in che ordine, a che ora, con quale locandina.
 CREATE TABLE event_artists (
-    event_id  UUID NOT NULL REFERENCES events  (id) ON DELETE CASCADE,
-    artist_id UUID NOT NULL REFERENCES artists (id) ON DELETE CASCADE,
-    PRIMARY KEY (event_id, artist_id)
+    event_id           UUID         NOT NULL REFERENCES events  (id) ON DELETE CASCADE,
+    artist_id          UUID         NOT NULL REFERENCES artists (id) ON DELETE CASCADE,
+    performance_order  INTEGER      NOT NULL,              -- posizione in scaletta: 1 = apre la serata
+    performance_start  TIMESTAMPTZ,                        -- orario di inizio dell'esibizione (facoltativo)
+    performance_end    TIMESTAMPTZ,
+    poster_url         VARCHAR(500),                       -- locandina dell'artista per questa serata (D06)
+    poster_storage_key VARCHAR(255),                       -- public_id Cloudinary, per cancellare il file
+    PRIMARY KEY (event_id, artist_id),
+
+    -- DEFERRABLE: riordinare la scaletta scambia le posizioni dentro una transazione;
+    -- l'unicita' si controlla solo al commit, non riga per riga.
+    CONSTRAINT uq_event_artists_order UNIQUE (event_id, performance_order) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT chk_event_artists_order CHECK (performance_order > 0),
+    CONSTRAINT chk_event_artists_times CHECK (
+        performance_start IS NULL OR performance_end IS NULL OR performance_end >= performance_start)
 );
 
 CREATE TABLE event_markers (
@@ -190,7 +204,7 @@ CREATE TABLE friendships (
     responded_at TIMESTAMPTZ,
 
     CONSTRAINT chk_friendships_self   CHECK (requester_id <> addressee_id),
-    CONSTRAINT chk_friendships_status CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED'))
+    CONSTRAINT chk_friendships_status CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'REMOVED'))
 );
 
 -- una sola riga per coppia di utenti, in qualunque direzione (D12)

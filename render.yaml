@@ -35,6 +35,10 @@ services:
       # Origine del FE per il CORS, es. https://eventi-fe.onrender.com
       - key: ALLOWED_ORIGIN
         sync: false
+      # Indirizzo del FE per i link nelle email (verifica account, ticket), es. https://eventi-fe.onrender.com
+      # Senza, i link puntano a http://localhost:5173.
+      - key: FRONTEND_URL
+        sync: false
       # FE e BE su due sottodomini onrender.com = siti diversi: il cookie di
       # sessione viaggia solo con SameSite=None + Secure.
       - key: SESSION_COOKIE_SAME_SITE
@@ -48,7 +52,13 @@ services:
         sync: false
       - key: CLOUDINARY_URL
         sync: false
+      # Cartella delle immagini di produzione (in locale il default e' eventi-dev).
+      - key: CLOUDINARY_FOLDER
+        value: eventi
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL
+        sync: false
+      # Primo SUPERADMIN: email di un utente gia' registrato (vedi SuperAdminBootstrap).
+      - key: SUPERADMIN_EMAIL
         sync: false

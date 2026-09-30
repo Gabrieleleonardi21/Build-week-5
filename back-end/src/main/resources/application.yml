@@ -26,6 +26,13 @@ spring:
     jdbc:
       initialize-schema: always
 
+  # Upload di foto e locandine (Cloudinary): 5 MB a file, il resto e' margine per il multipart.
+  # Oltre il limite la richiesta viene rifiutata con 413 prima di arrivare al controller.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   # Errori in formato ProblemDetail (RFC 9457) per tutta l'API.
   mvc:
     problemdetails:
@@ -48,6 +55,10 @@ server:
   # Render assegna la porta in PORT.
   port: ${PORT:8080}
   shutdown: graceful
+  # Dietro il proxy di Render: IP del client (limite tentativi di login) e HTTPS
+  # (HSTS) letti da X-Forwarded-*. "native" = RemoteIpValve di Tomcat, che si
+  # fida solo dei proxy con IP interno.
+  forward-headers-strategy: native
   servlet:
     session:
       timeout: 2h
@@ -59,6 +70,11 @@ server:
         secure: ${SESSION_COOKIE_SECURE:false}
 
 management:
+  # L'health check (usato da Render) non deve dipendere da Gmail: con SMTP irraggiungibile
+  # l'app andrebbe DOWN e Render la riavvierebbe. Le email fallite si ritentano da sole.
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -74,11 +90,22 @@ app:
     allowed-origins: ${ALLOWED_ORIGIN:http://localhost:5173,http://localhost:4173}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:noreply@localhost}}
+  bootstrap:
+    # Primo SUPERADMIN (SuperAdminBootstrap): all'avvio, se non ne esiste nessuno, viene
+    # promosso l'utente registrato con questa email. Poi la variabile non conta piu'.
+    superadmin-email: ${SUPERADMIN_EMAIL:}
+  # Indirizzo del frontend: serve per i link dentro le email.
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
   cloudinary:
     # Formato: cloudinary://<api_key>:<api_secret>@<cloud_name>
     url: ${CLOUDINARY_URL:}
+    # Cartella su Cloudinary: in locale "eventi-dev" (prove, si svuota senza pensieri),
+    # su Render "eventi" (render.yaml). Cosi' test e demo non si mescolano.
+    folder: ${CLOUDINARY_FOLDER:eventi-dev}
   ai:
-    # OpenRouter espone un'API compatibile OpenAI; il modello deve accettare immagini.
+    # OpenRouter espone un'API compatibile OpenAI; i modelli devono accettare immagini.
     base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
     api-key: ${OPENROUTER_API_KEY:}
-    model: ${OPENROUTER_MODEL:anthropic/claude-sonnet-5}
+    # Solo modelli gratuiti (":free"), separati da virgola: se il primo e' saturo (429)
+    # OpenRouter passa da solo al successivo. Catalogo: https://openrouter.ai/models?q=free
+    model: ${OPENROUTER_MODEL:google/gemma-4-26b-a4b-it:free,google/gemma-4-31b-it:free,qwen/qwen3.8-27b:free}
