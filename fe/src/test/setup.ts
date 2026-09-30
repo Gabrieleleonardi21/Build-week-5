@@ -4,6 +4,14 @@ import { cleanup, configure } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 import { server } from './msw/server'
 
+// jsdom non ha ResizeObserver (lo usano Radix e il campo del codice): basta che esista.
+class ResizeObserverStub {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+globalThis.ResizeObserver ??= ResizeObserverStub
+
 // Le pagine lazy (import dinamico) a freddo possono superare 1 s: attesa massima 3 s (non rallenta i test veloci).
 configure({ asyncUtilTimeout: 3000 })
 

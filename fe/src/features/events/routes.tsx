@@ -7,7 +7,10 @@ export const eventRoutes: FeatureRoutes = {
   public: [
     // Home: importata subito (non lazy), e' la prima pagina che si apre.
     { path: '/', element: <DiscoverPage /> },
-    placeholderRoute('/map', 'Mappa eventi', 'Eventi sulla mappa (GET /api/events/map, react-leaflet).'),
+    {
+      path: '/map',
+      lazy: () => import('./pages/EventsMapPage').then((module) => ({ Component: module.EventsMapPage })),
+    },
     // Lazy: la mappa (Leaflet) si scarica solo quando si apre un evento.
     {
       path: '/events/:id',

@@ -221,11 +221,28 @@
   .map-marker--entrance { background: var(--marker-entrance); }
   .map-marker--exit { background: var(--marker-exit); }
   .map-marker--emergency { background: var(--marker-emergency); }
-  /* Tooltip di Leaflet con i colori del tema. */
-  .leaflet-tooltip {
-    background: var(--popover);
-    color: var(--popover-foreground);
-    border-color: var(--border);
-    font-family: var(--font-sans);
-  }
+}
+
+/*
+ * Correzioni al CSS di Leaflet: FUORI da @layer, perche' gli stili in un layer perdono sempre contro
+ * quelli senza layer (come leaflet.css), qualunque sia la specificita'.
+ */
+/* Popup di Leaflet con i colori del tema (il CSS di Leaflet li farebbe bianchi con link blu). */
+.leaflet-container .leaflet-popup-content-wrapper,
+.leaflet-container .leaflet-popup-tip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+}
+.leaflet-container .leaflet-popup-content a {
+  color: var(--popover-foreground);
+}
+.leaflet-container {
+  font-family: var(--font-sans);
+}
+/* Tooltip di Leaflet con i colori del tema. */
+.leaflet-tooltip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border-color: var(--border);
+  font-family: var(--font-sans);
 }
