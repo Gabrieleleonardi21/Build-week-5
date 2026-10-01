@@ -25,7 +25,10 @@ export type LineupEntryRequest = Schemas['LineupEntryRequest']
 export type LineupEntryResponse = Schemas['LineupEntryResponse']
 export type MarkerRequest = Schemas['MarkerRequest']
 export type MarkerResponse = Schemas['MarkerResponse']
+export type AiDescriptionRequest = Schemas['AiDescriptionRequest']
 export type AiDescriptionResponse = Schemas['AiDescriptionResponse']
+export type OwnerResponse = Schemas['OwnerResponse']
+export type OwnerMessageRequest = Schemas['OwnerMessageRequest']
 
 export type ArtistRequest = Schemas['ArtistRequest']
 export type ArtistResponse = Schemas['ArtistResponse']
@@ -38,13 +41,19 @@ export type UnreadCountResponse = Schemas['UnreadCountResponse']
 
 export type UserSummaryResponse = Schemas['UserSummaryResponse']
 export type FriendResponse = Schemas['FriendResponse']
+export type FriendRequestCreate = Schemas['FriendRequestCreate']
 export type FriendRequestResponse = Schemas['FriendRequestResponse']
 export type ChatMessageResponse = Schemas['ChatMessageResponse']
 export type ChatSummaryResponse = Schemas['ChatSummaryResponse']
 
 export type ProfileResponse = Schemas['ProfileResponse']
 export type UpdateProfileRequest = Schemas['UpdateProfileRequest']
+export type AddressDto = Schemas['AddressDto']
+export type ChangePasswordRequest = Schemas['ChangePasswordRequest']
+export type DeleteAccountRequest = Schemas['DeleteAccountRequest']
 export type AdminUserResponse = Schemas['AdminUserResponse']
+export type RoleChangeRequest = Schemas['RoleChangeRequest']
+export type StatusChangeRequest = Schemas['StatusChangeRequest']
 
 /** Tutte le liste paginate del backend hanno questa forma (PageConfig, VIA_DTO). */
 export interface Page<T> {

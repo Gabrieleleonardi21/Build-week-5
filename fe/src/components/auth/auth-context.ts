@@ -10,6 +10,8 @@ export interface AuthContextValue {
   retry: () => void
   login: (credentials: LoginRequest) => Promise<UserResponse>
   logout: () => Promise<void>
+  /** La sessione e' gia' chiusa sul server (es. account eliminato): si azzera solo il browser, senza POST /logout. */
+  clearSession: () => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

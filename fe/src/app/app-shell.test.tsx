@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '@/lib/errors'
 import type { Role, UserResponse } from '@/lib/types'
-import { API, server } from '@/test/msw/server'
+import { API, EMPTY_PAGE, server } from '@/test/msw/server'
 import { renderRoute } from '@/test/render'
 import { shouldRetry } from './query-client'
 
@@ -20,6 +20,9 @@ function loggedAs(value: UserResponse | null) {
       }
       return HttpResponse.json(value)
     }),
+    // Le pagine protette usate qui sotto caricano le loro liste: vuote, interessa solo la guardia.
+    http.get(`${API}/api/me/tickets`, () => HttpResponse.json(EMPTY_PAGE)),
+    http.get(`${API}/api/admin/users`, () => HttpResponse.json(EMPTY_PAGE)),
   )
 }
 

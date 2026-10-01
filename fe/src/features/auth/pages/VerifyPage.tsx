@@ -13,8 +13,8 @@ import { ApiError, errorMessage } from '@/lib/errors'
 import { formatWait } from '@/lib/wait'
 import { resendCode, verifyEmail } from '../api'
 import { AuthShell } from '../components/AuthShell'
-import { FormError } from '../components/FormError'
-import { SubmitButton } from '../components/SubmitButton'
+import { FormError } from '@/components/form/FormError'
+import { SubmitButton } from '@/components/form/SubmitButton'
 import { verifySchema, type VerifyValues } from '../schemas'
 
 // Attesa tra un reinvio e l'altro (il backend ne ammette 3 ogni 15 minuti).

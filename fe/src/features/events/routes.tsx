@@ -1,5 +1,4 @@
 import type { FeatureRoutes } from '@/app/feature-routes'
-import { placeholderRoute } from '@/app/placeholder-route'
 import { DiscoverPage } from './pages/DiscoverPage'
 
 // Traccia T2 (scoperta) e T3 (organizzatore). Endpoint: /api/events, /api/events/map, /api/me/events.
@@ -18,8 +17,9 @@ export const eventRoutes: FeatureRoutes = {
     },
   ],
   auth: [
-    placeholderRoute('/events/new', 'Nuovo evento', 'Form evento con scaletta e marker; le foto salgono in background.'),
-    placeholderRoute('/events/:id/edit', 'Modifica evento', 'Dati, foto, locandine e descrizione con AI.'),
-    placeholderRoute('/me/events', 'I miei eventi', 'Eventi creati, anche passati e annullati (GET /api/me/events).'),
+    // Traccia T3. Il form (mappa, scaletta, upload) e' lazy: lo scarica solo chi organizza.
+    { path: '/events/new', lazy: () => import('./pages/EventFormPage').then((module) => ({ Component: module.EventCreatePage })) },
+    { path: '/events/:id/edit', lazy: () => import('./pages/EventFormPage').then((module) => ({ Component: module.EventEditPage })) },
+    { path: '/me/events', lazy: () => import('./pages/MyEventsPage').then((module) => ({ Component: module.MyEventsPage })) },
   ],
 }

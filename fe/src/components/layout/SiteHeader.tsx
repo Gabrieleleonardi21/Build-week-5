@@ -1,10 +1,11 @@
-import { BellIcon, MicrophoneStageIcon, PlusIcon } from '@phosphor-icons/react'
+import { MicrophoneStageIcon, PlusIcon } from '@phosphor-icons/react'
 import { Link, NavLink } from 'react-router'
 import { MAIN_NAV } from '@/app/nav'
 import { useAuth } from '@/components/auth/auth-context'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { MobileNav } from './MobileNav'
+import { NotificationBell } from './NotificationBell'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
 
@@ -42,11 +43,7 @@ export function SiteHeader() {
             Crea evento
           </Link>
         </Button>
-        <Button asChild variant="ghost" size="icon-lg" className="pointer-coarse:size-11">
-          <Link to="/notifications" aria-label="Notifiche" title="Notifiche">
-            <BellIcon aria-hidden="true" />
-          </Link>
-        </Button>
+        <NotificationBell />
         <UserMenu user={user} />
       </>
     )

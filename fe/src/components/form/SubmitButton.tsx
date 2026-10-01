@@ -6,11 +6,13 @@ interface SubmitButtonProps {
   isPending: boolean
   pendingLabel: string
   disabled?: boolean
+  /** Di default occupa tutta la larghezza (form stretti); nei form larghi si passa es. "w-fit". */
+  className?: string
   children: ReactNode
 }
 
 /** Bottone di invio: resta attivo finche' la richiesta non parte, poi mostra l'attesa. */
-export function SubmitButton({ isPending, pendingLabel, disabled, children }: SubmitButtonProps) {
+export function SubmitButton({ isPending, pendingLabel, disabled, className = 'w-full', children }: SubmitButtonProps) {
   let content = children
   if (isPending) {
     content = (
@@ -21,7 +23,7 @@ export function SubmitButton({ isPending, pendingLabel, disabled, children }: Su
     )
   }
   return (
-    <Button type="submit" className="w-full" disabled={isPending || disabled === true}>
+    <Button type="submit" className={className} disabled={isPending || disabled === true}>
       {content}
     </Button>
   )
