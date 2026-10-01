@@ -124,6 +124,9 @@ public class SecurityConfig {
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("Content-Type", "X-XSRF-TOKEN"));
 		config.setAllowCredentials(true);
+		// Il FE su un altro dominio (Render) legge solo gli header esposti: Retry-After dice
+		// quanti secondi aspettare dopo un 429 (login, codice di verifica, AI).
+		config.setExposedHeaders(List.of("Retry-After"));
 		config.setMaxAge(3600L);
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
