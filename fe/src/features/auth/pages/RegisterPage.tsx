@@ -11,8 +11,8 @@ import { ApiError, errorMessage } from '@/lib/errors'
 import { applyFieldErrors } from '@/lib/form-errors'
 import { register as registerRequest } from '../api'
 import { AuthShell } from '../components/AuthShell'
-import { FormError } from '../components/FormError'
-import { SubmitButton } from '../components/SubmitButton'
+import { FormError } from '@/components/form/FormError'
+import { SubmitButton } from '@/components/form/SubmitButton'
 import { registerSchema, type RegisterValues } from '../schemas'
 
 /** Oggi nel formato di <input type="date">: la data di nascita non puo' essere nel futuro. */

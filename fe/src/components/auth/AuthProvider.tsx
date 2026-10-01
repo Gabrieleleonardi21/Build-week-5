@@ -84,8 +84,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       retry: () => void me.refetch(),
       login,
       logout,
+      clearSession,
     }),
-    [user, me, login, logout],
+    [user, me, login, logout, clearSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

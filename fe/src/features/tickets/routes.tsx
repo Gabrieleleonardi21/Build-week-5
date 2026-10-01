@@ -1,7 +1,7 @@
 import type { FeatureRoutes } from '@/app/feature-routes'
-import { placeholderRoute } from '@/app/placeholder-route'
 
 // Traccia T4. Endpoint: /api/events/{id}/tickets, /api/me/tickets, /api/events/{id}/participants.
+// JoinButton e ParticipantsList non hanno rotte: li monta il dettaglio evento.
 export const ticketRoutes: FeatureRoutes = {
-  auth: [placeholderRoute('/me/tickets', 'I miei ticket', 'Ticket validi degli eventi a cui sei iscritto.')],
+  auth: [{ path: '/me/tickets', lazy: () => import('./pages/MyTicketsPage').then((module) => ({ Component: module.MyTicketsPage })) }],
 }

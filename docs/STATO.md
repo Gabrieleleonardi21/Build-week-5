@@ -1,6 +1,6 @@
 # Stato del progetto
 
-Aggiornato al **30/09/2026**. Chi completa una parte aggiorna la sua riga nella stessa PR (c'è la voce nel modello della PR).
+Aggiornato al **01/10/2026**. Chi completa una parte aggiorna la sua riga nella stessa PR (c'è la voce nel modello della PR).
 
 Legenda: ✅ fatto e su `main` · 🔀 fatto, PR da unire · ⏳ da fare
 
@@ -28,16 +28,16 @@ Legenda: ✅ fatto e su `main` · 🔀 fatto, PR da unire · ⏳ da fare
 | Design: token chiaro/scuro, accento, font, icone, componenti condivisi | — | Gabriele | ✅ | |
 | Home Discover (pagina modello per le liste) | T2 | Gabriele | ✅ | `features/events/pages/DiscoverPage.tsx` |
 | Dettaglio evento con mappa e marker | T2 | Gabriele | ✅ | spazi pronti per `JoinButton`, `ParticipantsList`, `OwnerActions` |
-| Accesso, registrazione, verifica email | T1 | Gabriele | 🔀 | branch `Gabriele` |
-| Mappa eventi `/map` | T2 | Gabriele | 🔀 | branch `Gabriele` |
-| Artisti (lista, dettaglio, modifica MODERATOR) | T2 | | ⏳ | |
-| Profilo, area admin | T1 | | ⏳ | |
-| Crea/modifica evento, foto, locandine, AI, i miei eventi, azioni del proprietario | T3 | | ⏳ | usare `uploadManager` per le foto |
-| Iscrizione (`JoinButton`), partecipanti, i miei ticket | T4 | | ⏳ | spazi già nel dettaglio evento |
-| Notifiche, amici, chat | T4 | | ⏳ | |
-| Tempo reale: `lib/stomp.ts`, `RealtimeProvider` | T4 | | ⏳ | contratto in `docs/API.md` §8 |
+| Accesso, registrazione, verifica email | T1 | Gabriele | ✅ | |
+| Mappa eventi `/map` | T2 | Gabriele | ✅ | |
+| Artisti (lista, dettaglio, crea; modifica e cancella MODERATOR) | T2 | Gabriele | 🔀 | branch `Gabriele` |
+| Profilo (dati, avatar, **cambio password**, elimina account), area admin, privacy | T1 | Gabriele | 🔀 | branch `Gabriele` |
+| Crea/modifica evento, foto, locandine, AI, i miei eventi, azioni del proprietario | T3 | Gabriele | 🔀 | posizione con clic sulla mappa, niente geocoding |
+| Iscrizione (`JoinButton`), partecipanti, i miei ticket | T4 | Gabriele | 🔀 | branch `Gabriele` |
+| Notifiche, amici, chat | T4 | Gabriele | 🔀 | branch `Gabriele` |
+| Tempo reale: `lib/stomp.ts`, `RealtimeProvider` | T4 | Gabriele | 🔀 | notifiche e chat live, riallineamento dopo la riconnessione |
 
-**Test:** 93 Vitest + MSW. Prima di aprire una PR: `npm run lint && npm run typecheck && npm run test && npm run build`.
+**Test:** 232 Vitest + MSW (nei test il WebSocket è sostituito da `src/test/fake-stomp.ts`). Prima di aprire una PR: `npm run lint && npm run typecheck && npm run test && npm run build`.
 
 ## Deploy e qualità
 
@@ -52,7 +52,7 @@ Legenda: ✅ fatto e su `main` · 🔀 fatto, PR da unire · ⏳ da fare
 ## Da decidere insieme
 
 - **Età minima alla registrazione:** oggi c'è solo "data nel passato", nessun limite di età.
-- **Chi prende quale traccia del frontend** (colonna "Chi" vuota qui sopra).
+- **Recupero password dimenticata:** oggi la password si cambia solo da loggati (profilo); serve un endpoint backend con codice via email.
 
 ## Avvio in locale
 

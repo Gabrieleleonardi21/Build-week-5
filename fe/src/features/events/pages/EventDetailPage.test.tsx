@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import type { EventResponse, Role, UserResponse } from '@/lib/types'
-import { API, server } from '@/test/msw/server'
+import { API, EMPTY_PAGE, server } from '@/test/msw/server'
 import { renderRoute } from '@/test/render'
 
 // La mappa (Leaflet) in jsdom non serve: si controlla che riceva l'evento giusto.
@@ -62,6 +62,9 @@ function setup(event: EventResponse | 404, me: { id: string; role: Role } | null
       }
       return HttpResponse.json(event)
     }),
+    // JoinButton e ParticipantsList (T4): chi e' loggato non e' iscritto e non ci sono partecipanti.
+    http.get(`${API}/api/events/:id/tickets/me`, () => HttpResponse.json({ status: 404, detail: 'Non sei iscritto a questo evento' }, { status: 404 })),
+    http.get(`${API}/api/events/:id/participants`, () => HttpResponse.json(EMPTY_PAGE)),
   )
 }
 
@@ -96,27 +99,27 @@ describe('EventDetailPage', () => {
     renderRoute('/events/e1')
 
     await screen.findByRole('heading', { level: 1 })
-    expect(screen.getByText(/Iscrizione a/)).toBeInTheDocument()
-    expect(screen.queryByText(/Gestione di/)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Accedi per iscriverti' })).toHaveAttribute('href', '/login')
+    expect(screen.queryByText(/Gestione dell'evento/)).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Partecipanti' })).not.toBeInTheDocument()
   })
 
   it('proprietario e moderatore vedono la gestione; un altro utente no', async () => {
     setup(detail(), { id: OWNER_ID, role: 'USER' })
     const owner = renderRoute('/events/e1')
-    expect(await screen.findByText(/Gestione di/)).toBeInTheDocument()
+    expect(await screen.findByText(/Gestione dell'evento/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Partecipanti' })).toBeInTheDocument()
     owner.unmount()
 
     setup(detail(), { id: 'mod-1', role: 'MODERATOR' })
     const moderator = renderRoute('/events/e1')
-    expect(await screen.findByText(/Gestione di/)).toBeInTheDocument()
+    expect(await screen.findByText(/Gestione dell'evento/)).toBeInTheDocument()
     moderator.unmount()
 
     setup(detail(), { id: 'altro', role: 'USER' })
     renderRoute('/events/e1')
     await screen.findByRole('heading', { name: 'Partecipanti' })
-    expect(screen.queryByText(/Gestione di/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Gestione dell'evento/)).not.toBeInTheDocument()
   })
 
   it('evento annullato: avviso ed etichetta', async () => {

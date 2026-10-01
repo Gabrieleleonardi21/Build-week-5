@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import { toQuery } from '@/lib/query'
-import type { EventPinResponse, EventResponse, EventSummaryResponse, Page } from '@/lib/types'
+import type { AiDescriptionResponse, EventPinResponse, EventRequest, EventResponse, EventSummaryResponse, Page } from '@/lib/types'
 
 export interface EventSearchParams {
   q: string
@@ -38,4 +38,31 @@ export function getEvent(id: string, signal?: AbortSignal): Promise<EventRespons
 /** Segnaposto per la mappa pubblica: stessi filtri della lista, massimo 500, senza paginazione. */
 export function getEventPins(params: EventPinParams, signal?: AbortSignal): Promise<EventPinResponse[]> {
   return api<EventPinResponse[]>(`/api/events/map${toQuery({ q: params.q, city: params.city })}`, { signal })
+}
+
+// ---- Traccia T3: scrittura (proprietario o MODERATOR; i permessi li controlla il backend).
+
+/** Crea un evento: il proprietario e' l'utente loggato. */
+export function createEvent(body: EventRequest): Promise<EventResponse> {
+  return api<EventResponse>('/api/events', { method: 'POST', body })
+}
+
+/** Sostituisce tutto l'evento, scaletta e marker compresi; i partecipanti ricevono una notifica. */
+export function updateEvent(id: string, body: EventRequest): Promise<EventResponse> {
+  return api<EventResponse>(`/api/events/${encodeURIComponent(id)}`, { method: 'PUT', body })
+}
+
+/** Toglie una foto: la successiva diventa copertina. */
+export function deleteEventImage(eventId: string, imageId: string): Promise<void> {
+  return api<void>(`/api/events/${encodeURIComponent(eventId)}/images/${encodeURIComponent(imageId)}`, { method: 'DELETE' })
+}
+
+/** Toglie la locandina di un artista in scaletta. */
+export function deletePoster(eventId: string, artistId: string): Promise<void> {
+  return api<void>(`/api/events/${encodeURIComponent(eventId)}/lineup/${encodeURIComponent(artistId)}/poster`, { method: 'DELETE' })
+}
+
+/** Proposta di descrizione dell'AI a partire dalla bozza (non salva nulla). */
+export function proposeDescription(eventId: string, text: string): Promise<AiDescriptionResponse> {
+  return api<AiDescriptionResponse>(`/api/events/${encodeURIComponent(eventId)}/ai-description`, { method: 'POST', body: { text } })
 }
