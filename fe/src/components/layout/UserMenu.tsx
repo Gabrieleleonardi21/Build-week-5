@@ -31,7 +31,7 @@ export function UserMenu({ user }: UserMenuProps) {
       >
         <UserAvatar firstName={user.firstName} lastName={user.lastName} avatarUrl={user.avatarUrl} className="size-9 pointer-coarse:size-11" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuLabel className="grid">
           <span className="truncate font-medium">
             {user.firstName} {user.lastName}
@@ -40,8 +40,19 @@ export function UserMenu({ user }: UserMenuProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {items.map((item) => (
-          <DropdownMenuItem key={item.to} asChild>
-            <Link to={item.to}>{item.label}</Link>
+          <DropdownMenuItem key={item.to} asChild className="items-start py-2">
+            <Link to={item.to}>
+              {item.icon !== undefined && <item.icon className="mt-0.5" aria-hidden="true" />}
+              <span className="grid">
+                <span className="font-medium">{item.label}</span>
+                {/* Il nome accessibile resta l'etichetta: la spiegazione e' solo visiva. */}
+                {item.hint !== undefined && (
+                  <span className="text-xs text-muted-foreground" aria-hidden="true">
+                    {item.hint}
+                  </span>
+                )}
+              </span>
+            </Link>
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />

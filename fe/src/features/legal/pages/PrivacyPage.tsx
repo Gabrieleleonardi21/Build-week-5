@@ -28,7 +28,7 @@ const LINK = 'rounded-sm font-medium text-foreground underline underline-offset-
 export function PrivacyPage() {
   return (
     <article className="mx-auto grid w-full max-w-3xl gap-8 px-4 py-8 pb-16">
-      <title>Privacy · Eventi</title>
+      <title>Privacy · Tourevents</title>
       <header className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-balance">Informativa sulla privacy</h1>
         <p className="max-w-prose text-muted-foreground text-pretty">

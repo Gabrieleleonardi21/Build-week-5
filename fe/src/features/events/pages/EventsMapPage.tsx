@@ -70,7 +70,7 @@ export function EventsMapPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 pb-16">
-      <title>Mappa eventi · Eventi</title>
+      <title>Mappa eventi · Tourevents</title>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-balance">Mappa degli eventi</h1>
         <p className="text-muted-foreground">Gli eventi in arrivo in tutta Italia. Tocca un pin per i dettagli.</p>

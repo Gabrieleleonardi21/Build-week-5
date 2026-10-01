@@ -1,4 +1,4 @@
-import { TicketIcon } from '@phosphor-icons/react'
+import { TicketIcon, UsersIcon } from '@phosphor-icons/react'
 import { Link } from 'react-router'
 import { Pagination } from '@/components/data/Pagination'
 import { StatusBadge } from '@/components/data/StatusBadge'
@@ -44,9 +44,17 @@ function TicketCard({ ticket }: { ticket: TicketResponse }) {
       </div>
       {/* Bordo tratteggiato: il "talloncino" del ticket, col codice da mostrare all'ingresso. */}
       <p className="flex items-center justify-between gap-3 border-t border-dashed pt-3 text-sm text-muted-foreground">
-        Codice
+        Codice d'ingresso
         <span className="font-mono text-base font-medium tracking-wider text-foreground">{ticket.code}</span>
       </p>
+      {/* Sopra il link che copre la card (relative z-10): porta dritto alla lista dei partecipanti. */}
+      <Link
+        to={`/events/${event.id}#partecipanti`}
+        className="relative z-10 flex w-fit items-center gap-1.5 rounded-sm text-sm font-medium underline underline-offset-4 outline-none hover:text-primary focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        <UsersIcon className="size-4" aria-hidden="true" />
+        Vedi chi partecipa e aggiungi amici
+      </Link>
     </article>
   )
 }
@@ -73,10 +81,10 @@ export function MyTicketsPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 pb-16">
-      <title>I miei ticket · Eventi</title>
+      <title>I miei ticket · Tourevents</title>
       <header className="grid gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-balance">I miei ticket</h1>
-        <p className="text-sm text-muted-foreground">Gli eventi a cui sei iscritto. Il codice è lo stesso che hai ricevuto per email.</p>
+        <p className="text-sm text-muted-foreground">Gli eventi a cui sei iscritto. Mostra il codice all'ingresso: è lo stesso che hai ricevuto per email.</p>
       </header>
       <QueryState
         query={tickets}
@@ -86,7 +94,7 @@ export function MyTicketsPage() {
           <EmptyState
             icon={<TicketIcon />}
             title="Non hai ancora ticket"
-            description="Quando ti iscrivi a un evento il ticket compare qui."
+            description="Apri un evento e premi “Partecipa”: il ticket con il codice d'ingresso compare qui."
             action={
               <Button asChild>
                 <Link to="/">Scopri gli eventi</Link>

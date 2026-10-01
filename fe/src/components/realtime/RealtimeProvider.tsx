@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/components/auth/auth-context'
 import { createRealtimeClient, type RealtimeClient } from '@/lib/stomp'
 import type { ChatMessageResponse, NotificationResponse } from '@/lib/types'
+import { notificationKeys } from '@/features/notifications/api'
 import { applyChatMessage, applyNotification, refreshAfterReconnect } from './cache-updates'
 import { RealtimeContext, type ChatEvent, type RealtimeContextValue } from './realtime-context'
 
@@ -110,6 +111,11 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
       }
       if (wasConnected) {
         refreshAfterReconnect(queryClient)
+      } else {
+        // Prima connessione: le notifiche arrivate tra il caricamento della pagina e l'iscrizione
+        // alle code (o durante tentativi falliti) non verrebbero mai rimandate. Solo le notifiche:
+        // ricaricare la chat qui potrebbe sovrascrivere un messaggio appena arrivato dal socket.
+        void queryClient.invalidateQueries({ queryKey: notificationKeys.all })
       }
       wasConnected = true
     }

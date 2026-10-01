@@ -7,6 +7,7 @@ import type { EventSummaryResponse, Page } from '@/lib/types'
 import { DiscoverHero } from '../components/DiscoverHero'
 import { EventFilters } from '../components/EventFilters'
 import { EventGrid, EventGridSkeleton } from '../components/EventGrid'
+import { HowItWorks } from '../components/HowItWorks'
 import { useEvents } from '../hooks/useEvents'
 
 const FILTER_KEYS = ['q', 'city'] as const
@@ -64,6 +65,8 @@ export function DiscoverPage() {
           />
         }
       />
+      {/* La guida solo sulla home "pulita": chi sta cercando non ne ha bisogno. */}
+      {q === '' && city === '' && filters.page === 0 && <HowItWorks />}
       <section aria-labelledby="events-title" className="grid gap-6">
         <div className="flex items-baseline justify-between gap-4 border-t pt-8">
           <h2 id="events-title" className="text-xl font-semibold tracking-tight">

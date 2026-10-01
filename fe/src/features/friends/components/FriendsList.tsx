@@ -11,6 +11,7 @@ import { formatDate } from '@/lib/format'
 import type { FriendResponse } from '@/lib/types'
 import { useFriends, useRemoveFriendship } from '../hooks/useFriends'
 import { ROW_CLASS, RowsSkeleton } from './RowsSkeleton'
+import { HowFriendsWork } from './HowFriendsWork'
 import { UserLine } from './UserLine'
 
 function unreadLabel(count: number): string {
@@ -42,7 +43,7 @@ function FriendRow({ item }: { item: FriendResponse }) {
         <ConfirmDialog
           trigger={
             <Button variant="ghost" size="sm" aria-label={`Rimuovi ${friend.firstName} ${friend.lastName} dagli amici`}>
-              Rimuovi
+              Rimuovi amico
             </Button>
           }
           title={`Rimuovere ${friend.firstName} dagli amici?`}
@@ -66,16 +67,24 @@ export function FriendsList() {
       loading={<RowsSkeleton label="Caricamento amici…" />}
       isEmpty={(data) => data.content.length === 0}
       empty={
-        <EmptyState
-          icon={<UsersIcon />}
-          title="Non hai ancora amici"
-          description="Iscriviti a un evento: dalla lista dei partecipanti puoi chiedere l'amicizia a chi ci va con te."
-          action={
-            <Button asChild>
-              <Link to="/">Scopri gli eventi</Link>
-            </Button>
-          }
-        />
+        <div className="grid gap-4">
+          <EmptyState
+            icon={<UsersIcon />}
+            title="Non hai ancora amici"
+            description="Iscriviti a un evento: poi potrai aggiungere agli amici chi ci va con te e chattare."
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button asChild>
+                  <Link to="/">Scopri gli eventi</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to="/friends?tab=cerca">Trova persone</Link>
+                </Button>
+              </div>
+            }
+          />
+          <HowFriendsWork />
+        </div>
       }
     >
       {(data) => (

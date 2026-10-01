@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { hasRole } from '@/lib/roles'
 import type { UserResponse } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { Logo } from './Logo'
 
 interface MobileNavProps {
   user: UserResponse | null
@@ -47,7 +48,9 @@ export function MobileNav({ user }: MobileNavProps) {
       </SheetTrigger>
       <SheetContent side="left" className="w-72 overflow-y-auto overscroll-contain p-4">
         <SheetHeader className="p-0">
-          <SheetTitle>Menu</SheetTitle>
+          <SheetTitle>
+            <Logo />
+          </SheetTitle>
         </SheetHeader>
         <nav aria-label="Menu mobile" className="grid gap-1">
           {MAIN_NAV.map((item) => (
@@ -63,7 +66,8 @@ export function MobileNav({ user }: MobileNavProps) {
           ))}
           {account.length > 0 && <hr className="my-2" />}
           {account.map((item) => (
-            <NavLink key={item.to} to={item.to} className={linkClass} onClick={close}>
+            <NavLink key={item.to} to={item.to} className={(state) => cn(linkClass(state), 'gap-3')} onClick={close}>
+              {item.icon !== undefined && <item.icon aria-hidden="true" />}
               {item.label}
             </NavLink>
           ))}

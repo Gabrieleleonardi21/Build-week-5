@@ -43,7 +43,7 @@ export function ArtistsPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-8 pb-16">
-      <title>Artisti · Eventi</title>
+      <title>Artisti · Tourevents</title>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-2">
           <h1 className="text-3xl font-semibold tracking-tight text-balance">Artisti</h1>

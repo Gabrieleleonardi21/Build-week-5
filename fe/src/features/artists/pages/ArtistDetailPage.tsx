@@ -104,7 +104,7 @@ function ArtistDetail({ artist, canModerate }: ArtistDetailProps) {
   }
   return (
     <article className={LAYOUT}>
-      <title>{`${artist.name} · Eventi`}</title>
+      <title>{`${artist.name} · Tourevents`}</title>
       <ArtistImage imageUrl={artist.imageUrl} alt={`Foto di ${artist.name}`} size={600} loading="eager" className="max-w-72 rounded-2xl" />
       <div className="grid min-w-0 gap-6">
         <header className="grid justify-items-start gap-3">

@@ -59,7 +59,7 @@ function ChatHeader({ peer }: ChatHeaderProps) {
     const name = `${peer.user.firstName} ${peer.user.lastName}`
     who = (
       <>
-        <title>{`Chat con ${name} · Eventi`}</title>
+        <title>{`Chat con ${name} · Tourevents`}</title>
         <UserAvatar firstName={peer.user.firstName} lastName={peer.user.lastName} avatarUrl={peer.user.avatarUrl} className="size-10" />
         <h1 className="min-w-0 truncate font-semibold">
           <Link to={`/users/${peer.user.id}`} className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
@@ -178,7 +178,7 @@ function Conversation({ chatId }: { chatId: string }) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6">
-      <title>Chat · Eventi</title>
+      <title>Chat · Tourevents</title>
       {/* Altezza fissa sulla finestra: scorre solo lo storico, intestazione e campo restano visibili. */}
       <section aria-label="Conversazione" className="flex h-[calc(100dvh-8rem)] min-h-96 flex-col overflow-hidden rounded-2xl border bg-card">
         <ChatHeader peer={peer.data} />

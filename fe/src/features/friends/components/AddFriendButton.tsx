@@ -44,7 +44,7 @@ export function AddFriendButton({ addresseeId, eventId, name }: AddFriendButtonP
         onClick={() => request.mutate({ addresseeId, eventId })}
       >
         <UserPlusIcon data-icon="inline-start" aria-hidden="true" />
-        Aggiungi
+        Aggiungi agli amici
       </Button>
       {request.isError && (
         <p role="alert" className="max-w-40 text-right text-xs font-medium text-destructive">

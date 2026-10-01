@@ -54,7 +54,7 @@ export function AdminUsersPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 pb-16">
-      <title>Moderazione · Eventi</title>
+      <title>Moderazione · Tourevents</title>
       <header className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-balance">Moderazione degli account</h1>
         <p className="max-w-prose text-muted-foreground">{intro}</p>

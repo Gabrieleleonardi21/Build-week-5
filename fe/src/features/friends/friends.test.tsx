@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { FriendRequestResponse, FriendResponse, Page, UserResponse, UserSummaryResponse } from '@/lib/types'
+import type { FriendRequestResponse, FriendResponse, Page, TicketResponse, UserResponse, UserSummaryResponse } from '@/lib/types'
 import { API, EMPTY_PAGE, server } from '@/test/msw/server'
 import { renderRoute } from '@/test/render'
 
@@ -33,7 +33,7 @@ describe('FriendsPage: amici', () => {
     renderRoute('/friends')
 
     expect(await screen.findByRole('link', { name: 'Sara Colombo' })).toHaveAttribute('href', '/users/u2')
-    expect(screen.getByRole('link', { name: /Chat/ })).toHaveAttribute('href', '/chats/f1')
+    expect(within(screen.getByRole('list')).getByRole('link', { name: /Chat/ })).toHaveAttribute('href', '/chats/f1')
     expect(screen.getByLabelText('2 messaggi non letti')).toHaveTextContent('2')
     expect(screen.getByText('Amici dal 10 marzo 2027')).toBeInTheDocument()
   })
@@ -78,7 +78,7 @@ describe('FriendsPage: richieste', () => {
     server.use(http.get(`${API}/api/friendships/requests/received`, () => HttpResponse.json(page([REQUEST]))))
     const { router } = renderRoute('/friends')
 
-    const tab = await screen.findByRole('tab', { name: /Ricevute/ })
+    const tab = await screen.findByRole('tab', { name: /Richieste ricevute/ })
     expect(await within(tab).findByLabelText('1 richiesta in attesa')).toBeInTheDocument()
     await userEvent.click(tab)
 
@@ -162,7 +162,7 @@ describe('FriendsPage: richieste', () => {
   it('una scheda sconosciuta nell’URL apre gli amici', async () => {
     renderRoute('/friends?tab=boh')
 
-    expect(await screen.findByRole('tab', { name: 'Amici' })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('tab', { name: 'I miei amici' })).toHaveAttribute('aria-selected', 'true')
   })
 })
 
@@ -177,7 +177,7 @@ describe('FriendsPage: ricerca utenti', () => {
     )
     renderRoute('/friends?tab=cerca')
 
-    await userEvent.type(await screen.findByLabelText('Nome o cognome'), 's')
+    await userEvent.type(await screen.findByLabelText('Cerca una persona per nome o cognome'), 's')
     await userEvent.click(screen.getByRole('button', { name: 'Cerca' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Scrivi almeno 2 caratteri.')
@@ -194,7 +194,7 @@ describe('FriendsPage: ricerca utenti', () => {
     )
     const { router } = renderRoute('/friends?tab=cerca')
 
-    await userEvent.type(await screen.findByLabelText('Nome o cognome'), 'sara')
+    await userEvent.type(await screen.findByLabelText('Cerca una persona per nome o cognome'), 'sara')
     await userEvent.click(screen.getByRole('button', { name: 'Cerca' }))
 
     expect(await screen.findByRole('link', { name: 'Sara Colombo' })).toHaveAttribute('href', '/users/u2')
@@ -214,7 +214,7 @@ describe('FriendsPage: ricerca utenti', () => {
     server.use(http.get(`${API}/api/users`, () => HttpResponse.json(page([SARA]))))
     const { router } = renderRoute('/friends?tab=cerca&q=sara')
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Inviate' }))
+    await userEvent.click(await screen.findByRole('tab', { name: 'Richieste inviate' }))
 
     await waitFor(() => expect(router.state.location.search).toBe('?tab=inviate'))
   })
@@ -235,5 +235,64 @@ describe('UserProfilePage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Utente non trovato' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Vai ai tuoi amici' })).toHaveAttribute('href', '/friends')
+  })
+})
+
+describe('Aggiungi agli amici dalla ricerca', () => {
+  const MY_TICKET: TicketResponse = {
+    id: 't1',
+    code: 'EVT-7K3M9QA2',
+    status: 'VALID',
+    issuedAt: '2027-01-02T10:00:00Z',
+    event: {
+      id: 'e1',
+      title: 'Jazz sotto le stelle',
+      startsAt: '2027-06-10T19:00:00Z',
+      endsAt: null,
+      venueName: null,
+      city: 'Milano',
+      province: 'MI',
+      latitude: 45.46,
+      longitude: 9.19,
+      status: 'PUBLISHED',
+      coverUrl: null,
+    },
+  }
+
+  beforeEach(() => {
+    server.use(
+      http.get(`${API}/api/users`, () => HttpResponse.json(page([SARA]))),
+      http.get(`${API}/api/me/tickets`, () => HttpResponse.json(page([MY_TICKET]))),
+    )
+  })
+
+  it('si sceglie l’evento in comune e parte la richiesta', async () => {
+    let body: unknown = null
+    server.use(
+      http.post(`${API}/api/friendships`, async ({ request }) => {
+        body = await request.json()
+        return HttpResponse.json({ id: 'f9', user: SARA, eventId: 'e1', eventTitle: 'Jazz sotto le stelle', createdAt: '2027-03-10T10:00:00Z' }, { status: 201 })
+      }),
+    )
+    renderRoute('/friends?tab=cerca&q=sara')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Aggiungi agli amici' }))
+    expect(await screen.findByRole('combobox', { name: 'A quale evento andate insieme?' })).toHaveValue('e1')
+    await userEvent.click(screen.getByRole('button', { name: 'Invia richiesta a Sara' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Richiesta inviata a Sara')
+    expect(body).toEqual({ addresseeId: 'u2', eventId: 'e1' })
+  })
+
+  it('403: spiega che l’altra persona non partecipa a quell’evento', async () => {
+    server.use(
+      http.post(`${API}/api/friendships`, () => HttpResponse.json({ detail: 'Non partecipate allo stesso evento' }, { status: 403 })),
+    )
+    renderRoute('/friends?tab=cerca&q=sara')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Aggiungi agli amici' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Invia richiesta a Sara' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sara non risulta tra i partecipanti di questo evento')
   })
 })

@@ -39,7 +39,11 @@ export function ParticipantsList({ eventId }: ParticipantsListProps) {
   const participants = useParticipants(eventId, page, PAGE_SIZE)
 
   if (participants.error instanceof ApiError && participants.error.status === 403) {
-    return <p className="text-sm text-muted-foreground">Iscriviti all'evento per vedere chi partecipa.</p>
+    return (
+      <p className="text-sm text-muted-foreground">
+        Iscriviti all'evento per vedere chi partecipa e aggiungere agli amici chi ci va con te.
+      </p>
+    )
   }
 
   return (
@@ -47,13 +51,13 @@ export function ParticipantsList({ eventId }: ParticipantsListProps) {
       query={participants}
       loading={<ParticipantsSkeleton />}
       isEmpty={(data) => data.content.length === 0}
-      empty={<p className="text-sm text-muted-foreground">Ancora nessun iscritto.</p>}
+      empty={<p className="text-sm text-muted-foreground">Ancora nessun iscritto: torna più avanti per vedere chi partecipa.</p>}
     >
       {(data) => (
         <>
           <ul className="grid gap-3 sm:grid-cols-2">
             {data.content.map((participant) => (
-              <li key={participant.id} className="flex items-center gap-3 rounded-xl border p-3">
+              <li key={participant.id} className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3">
                 <UserLine user={participant} />
                 {/* A se stessi l'amicizia non si chiede (il backend risponderebbe 400). */}
                 {user !== null && user.id !== participant.id && (

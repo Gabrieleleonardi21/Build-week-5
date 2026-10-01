@@ -5,8 +5,11 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { QueryState } from '@/components/feedback/QueryState'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useAuth } from '@/components/auth/auth-context'
 import { Label } from '@/components/ui/label'
 import { MIN_SEARCH_LENGTH, useUserSearch } from '../hooks/useFriends'
+import { HowFriendsWork } from './HowFriendsWork'
+import { RequestFriendship } from './RequestFriendship'
 import { ROW_CLASS, RowsSkeleton } from './RowsSkeleton'
 import { UserLine } from './UserLine'
 
@@ -17,6 +20,7 @@ interface UserSearchProps {
 }
 
 function Results({ q }: { q: string }) {
+  const { user: me } = useAuth()
   const [page, setPage] = useState(0)
   const users = useUserSearch(q, page)
   return (
@@ -24,7 +28,7 @@ function Results({ q }: { q: string }) {
       query={users}
       loading={<RowsSkeleton label="Ricerca in corso…" />}
       isEmpty={(data) => data.content.length === 0}
-      empty={<EmptyState icon={<MagnifyingGlassIcon />} title="Nessun utente trovato" description="Controlla il nome o prova con il cognome." />}
+      empty={<EmptyState icon={<MagnifyingGlassIcon />} title="Nessun utente trovato" description="Controlla come l’hai scritto, oppure prova solo con il nome o solo con il cognome." />}
     >
       {(data) => (
         <>
@@ -32,6 +36,8 @@ function Results({ q }: { q: string }) {
             {data.content.map((user) => (
               <li key={user.id} className={ROW_CLASS}>
                 <UserLine user={user} />
+                {/* A se stessi l'amicizia non si chiede (il backend risponderebbe 400). */}
+                {me !== null && me.id !== user.id && <RequestFriendship user={user} />}
               </li>
             ))}
           </ul>
@@ -65,9 +71,10 @@ export function UserSearch({ q, onSearch }: UserSearchProps) {
 
   return (
     <div className="grid gap-6">
+      <HowFriendsWork />
       {/* key: se l'URL cambia (Indietro) il campo riparte dal valore dell'URL. */}
       <form key={q} role="search" aria-label="Cerca utenti" onSubmit={handleSubmit} className="grid gap-2">
-        <Label htmlFor="user-search-q">Nome o cognome</Label>
+        <Label htmlFor="user-search-q">Cerca una persona per nome o cognome</Label>
         <div className="flex gap-2">
           <Input
             id="user-search-q"
@@ -79,7 +86,7 @@ export function UserSearch({ q, onSearch }: UserSearchProps) {
             maxLength={100}
             aria-invalid={tooShort}
             aria-describedby={errorId}
-            className="max-w-sm"
+            className="sm:max-w-sm"
           />
           <Button type="submit">
             <MagnifyingGlassIcon data-icon="inline-start" aria-hidden="true" />
@@ -92,7 +99,7 @@ export function UserSearch({ q, onSearch }: UserSearchProps) {
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Si diventa amici tra partecipanti dello stesso evento: la richiesta si invia dalla lista dei partecipanti.
+          Si diventa amici tra partecipanti dello stesso evento: trovata la persona, premi “Aggiungi agli amici” e scegli l’evento a cui andate insieme.
         </p>
       </form>
       {/* key: una nuova ricerca riparte dalla prima pagina. */}
