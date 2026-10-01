@@ -1,11 +1,13 @@
 import { ArrowLeftIcon } from '@phosphor-icons/react'
 import { Link, useParams } from 'react-router'
+import { useAuth } from '@/components/auth/auth-context'
 import { UserAvatar } from '@/components/data/UserAvatar'
 import { QueryState } from '@/components/feedback/QueryState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/errors'
 import type { UserSummaryResponse } from '@/lib/types'
+import { RequestFriendship } from '../components/RequestFriendship'
 import { usePublicUser } from '../hooks/useFriends'
 
 function ProfileSkeleton() {
@@ -30,15 +32,26 @@ function UserNotFound() {
 }
 
 function Profile({ user }: { user: UserSummaryResponse }) {
+  const { user: me } = useAuth()
   const name = `${user.firstName} ${user.lastName}`
   return (
     <div className="grid justify-items-center gap-4 text-center">
-      <title>{`${name} · Eventi`}</title>
+      <title>{`${name} · Tourevents`}</title>
       <UserAvatar firstName={user.firstName} lastName={user.lastName} avatarUrl={user.avatarUrl} className="size-24 text-2xl" />
       <h1 className="text-2xl font-semibold tracking-tight text-balance">{name}</h1>
-      <p className="max-w-prose text-sm text-muted-foreground">
-        Per diventare amici iscrivetevi allo stesso evento: la richiesta si invia dalla lista dei partecipanti.
-      </p>
+      {me !== null && me.id === user.id && (
+        <Button asChild variant="outline">
+          <Link to="/profile">Modifica il tuo profilo</Link>
+        </Button>
+      )}
+      {me !== null && me.id !== user.id && (
+        <>
+          <p className="max-w-prose text-sm text-muted-foreground">
+            Per diventare amici dovete partecipare allo stesso evento: scegli quale e invia la richiesta.
+          </p>
+          <RequestFriendship user={user} align="center" />
+        </>
+      )}
     </div>
   )
 }

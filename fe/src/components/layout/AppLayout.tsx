@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router'
 import { RealtimeProvider } from '@/components/realtime/RealtimeProvider'
 import { UploadTray } from '@/components/uploads/UploadTray'
+import { CookieBanner } from './CookieBanner'
 import { SiteFooter } from './SiteFooter'
 import { SiteHeader } from './SiteHeader'
 
@@ -23,6 +24,7 @@ export function AppLayout() {
         </main>
         <SiteFooter />
         <UploadTray />
+        <CookieBanner />
       </div>
     </RealtimeProvider>
   )

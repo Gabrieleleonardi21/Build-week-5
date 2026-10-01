@@ -61,7 +61,7 @@ export function NotificationsPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-6 px-4 py-8 pb-16">
-      <title>Notifiche · Eventi</title>
+      <title>Notifiche · Tourevents</title>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1">
           <h1 className="text-2xl font-semibold tracking-tight text-balance">Notifiche</h1>

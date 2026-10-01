@@ -11,11 +11,14 @@ export function useMyTicket(eventId: string, enabled: boolean) {
   })
 }
 
-export function useMyTickets(page: number, size: number) {
+/** enabled=false finche' non servono (es. la scelta dell'evento in comune per un'amicizia). */
+export function useMyTickets(page: number, size: number, enabled = true) {
   return useQuery({
-    queryKey: ticketKeys.list(page),
+    // size nella chiave: la pagina dei ticket (12) e la scelta dell'evento (50) non si sovrascrivono.
+    queryKey: [...ticketKeys.list(page), size],
     queryFn: ({ signal }) => getMyTickets(page, size, signal),
     placeholderData: keepPreviousData,
+    enabled,
   })
 }
 

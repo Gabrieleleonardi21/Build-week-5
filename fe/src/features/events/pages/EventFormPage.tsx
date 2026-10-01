@@ -31,7 +31,7 @@ interface PageShellProps {
 function PageShell({ title, description, back, children }: PageShellProps) {
   return (
     <div className="mx-auto grid w-full max-w-4xl gap-6 px-4 py-8 pb-16">
-      <title>{`${title} · Eventi`}</title>
+      <title>{`${title} · Tourevents`}</title>
       <Button asChild variant="ghost" className="w-fit">
         <Link to={back.to}>
           <ArrowLeftIcon data-icon="inline-start" aria-hidden="true" />

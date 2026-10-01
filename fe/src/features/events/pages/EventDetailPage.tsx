@@ -1,5 +1,6 @@
 import { ArrowLeftIcon, WarningIcon } from '@phosphor-icons/react'
-import { Link, useParams } from 'react-router'
+import { useEffect } from 'react'
+import { Link, useLocation, useParams } from 'react-router'
 import { useAuth } from '@/components/auth/auth-context'
 import { StatusBadge } from '@/components/data/StatusBadge'
 import { QueryState } from '@/components/feedback/QueryState'
@@ -56,6 +57,14 @@ interface EventDetailProps {
 
 function EventDetail({ event, user }: EventDetailProps) {
   const manage = canManage(user, event)
+  const { hash } = useLocation()
+  // Link come "Vedi chi partecipa" (/events/:id#partecipanti): la sezione esiste solo ora che i dati
+  // sono arrivati, quindi lo scroll all'ancora si fa qui e non lo fa il browser.
+  useEffect(() => {
+    if (hash !== '') {
+      document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
+    }
+  }, [hash])
   // Iscrizione (T4) e, per proprietario/moderatori, gestione (T3): stessi posti per tutti.
   const actions = (
     <div className="grid gap-3">
@@ -67,7 +76,7 @@ function EventDetail({ event, user }: EventDetailProps) {
   return (
     <article className="grid gap-10">
       {/* React 19 porta <title> nell'<head>: la scheda del browser mostra il nome dell'evento. */}
-      <title>{`${event.title} · Eventi`}</title>
+      <title>{`${event.title} · Tourevents`}</title>
       {event.status === 'CANCELLED' && (
         <div role="status" className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm">
           <WarningIcon className="mt-0.5 shrink-0 text-destructive" aria-hidden="true" />
@@ -118,10 +127,15 @@ function EventDetail({ event, user }: EventDetailProps) {
         <EventLocationMap event={event} />
       </section>
       {user !== null && (
-        <section aria-labelledby="participants-title" className="grid gap-3">
-          <h2 id="participants-title" className="text-xl font-semibold">
-            Partecipanti
-          </h2>
+        <section id="partecipanti" aria-labelledby="participants-title" className="grid scroll-mt-24 gap-3">
+          <div className="grid gap-1">
+            <h2 id="participants-title" className="text-xl font-semibold">
+              Partecipanti
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Chi va a questo evento. Aggiungili agli amici: quando accettano potete chattare.
+            </p>
+          </div>
           <ParticipantsList eventId={event.id} />
         </section>
       )}

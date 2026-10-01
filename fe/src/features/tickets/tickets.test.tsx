@@ -191,14 +191,14 @@ describe('ParticipantsList', () => {
     )
     renderRoute('/events/e1')
 
-    expect(await screen.findByText("Iscriviti all'evento per vedere chi partecipa.")).toBeInTheDocument()
+    expect(await screen.findByText(/Iscriviti all'evento per vedere chi partecipa/)).toBeInTheDocument()
   })
 
   it('nessun iscritto', async () => {
     setup(event())
     renderRoute('/events/e1')
 
-    expect(await screen.findByText('Ancora nessun iscritto.')).toBeInTheDocument()
+    expect(await screen.findByText(/Ancora nessun iscritto/)).toBeInTheDocument()
   })
 
   it('elenco con link al profilo; la richiesta di amicizia parte con utente ed evento', async () => {

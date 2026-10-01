@@ -1,9 +1,10 @@
-import { MicrophoneStageIcon, PlusIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, ChatsCircleIcon, PlusIcon } from '@phosphor-icons/react'
 import { Link, NavLink } from 'react-router'
 import { MAIN_NAV } from '@/app/nav'
 import { useAuth } from '@/components/auth/auth-context'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Logo } from './Logo'
 import { MobileNav } from './MobileNav'
 import { NotificationBell } from './NotificationBell'
 import { ThemeToggle } from './ThemeToggle'
@@ -11,7 +12,7 @@ import { UserMenu } from './UserMenu'
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return cn(
-    'rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+    'rounded-lg px-3 py-2 text-sm text-foreground/70 transition-colors hover:text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
     isActive && 'text-foreground font-medium',
   )
 }
@@ -29,7 +30,10 @@ export function SiteHeader() {
           <Link to="/login">Accedi</Link>
         </Button>
         <Button asChild>
-          <Link to="/register">Registrati</Link>
+          <Link to="/register">
+            Registrati
+            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
+          </Link>
         </Button>
       </>
     )
@@ -43,6 +47,11 @@ export function SiteHeader() {
             Crea evento
           </Link>
         </Button>
+        <Button asChild variant="ghost" size="icon-lg" className="pointer-coarse:size-11">
+          <Link to="/chats" aria-label="Chat" title="Chat">
+            <ChatsCircleIcon aria-hidden="true" />
+          </Link>
+        </Button>
         <NotificationBell />
         <UserMenu user={user} />
       </>
@@ -50,14 +59,11 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4">
         <MobileNav user={user} />
-        <Link to="/" className="mr-4 flex items-center gap-2 rounded-lg font-semibold tracking-tight outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-          <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground" aria-hidden="true">
-            <MicrophoneStageIcon weight="fill" size={18} />
-          </span>
-          Eventi
+        <Link to="/" aria-label="Tourevents, home" className="mr-6 rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+          <Logo />
         </Link>
         <nav aria-label="Principale" className="hidden items-center gap-1 md:flex">
           {MAIN_NAV.map((item) => (

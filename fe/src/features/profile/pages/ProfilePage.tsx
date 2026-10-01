@@ -76,7 +76,7 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-6 px-4 py-8 pb-16">
-      <title>Profilo · Eventi</title>
+      <title>Profilo · Tourevents</title>
       <header className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-balance">Profilo</h1>
         {meta}

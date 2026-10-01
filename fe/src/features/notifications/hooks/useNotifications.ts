@@ -2,8 +2,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { getNotifications, getUnreadCount, markNotificationRead, notificationKeys } from '../api'
 
 // Il contatore si aggiorna in tempo reale (RealtimeProvider); se il WebSocket cade
-// si rilegge comunque ogni minuto, cosi' il badge non resta fermo.
-const UNREAD_REFRESH_MS = 60_000
+// si rilegge comunque ogni 30 secondi (e tornando sulla scheda), cosi' il badge non resta fermo.
+const UNREAD_REFRESH_MS = 30_000
 
 /** Notifiche paginate; cambiando pagina la lista vecchia resta finche' arriva la nuova. */
 export function useNotifications(page: number) {
@@ -11,6 +11,7 @@ export function useNotifications(page: number) {
     queryKey: notificationKeys.list(page),
     queryFn: ({ signal }) => getNotifications(page, signal),
     placeholderData: keepPreviousData,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -20,6 +21,7 @@ export function useUnreadCount() {
     queryKey: notificationKeys.unread(),
     queryFn: ({ signal }) => getUnreadCount(signal),
     refetchInterval: UNREAD_REFRESH_MS,
+    refetchOnWindowFocus: true,
   })
 }
 

@@ -1,12 +1,14 @@
 import { useSearchParams } from 'react-router'
+import { MagnifyingGlassIcon } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FriendsList } from '../components/FriendsList'
 import { ReceivedRequests, SentRequests } from '../components/FriendRequests'
 import { UserSearch } from '../components/UserSearch'
 import { useReceivedRequests } from '../hooks/useFriends'
 
-const TABS = ['amici', 'ricevute', 'inviate', 'cerca'] as const
+const TABS = ['amici', 'cerca', 'ricevute', 'inviate'] as const
 type FriendsTab = (typeof TABS)[number]
 
 /** Scheda dall'URL (?tab=); un valore sconosciuto vale come la prima. */
@@ -56,20 +58,31 @@ export function FriendsPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-6 px-4 py-8 pb-16">
-      <title>Amici · Eventi</title>
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">Amici</h1>
-        <p className="text-sm text-muted-foreground">Le persone conosciute agli eventi, con cui puoi chattare.</p>
+      <title>Amici · Tourevents</title>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="grid gap-1">
+          <h1 className="text-3xl font-semibold text-balance">Amici</h1>
+          <p className="text-sm text-muted-foreground">Le persone conosciute agli eventi, con cui puoi chattare.</p>
+        </div>
+        {tab !== 'cerca' && (
+          <Button onClick={() => selectTab('cerca')}>
+            <MagnifyingGlassIcon data-icon="inline-start" aria-hidden="true" />
+            Trova persone
+          </Button>
+        )}
       </header>
       <Tabs value={tab} onValueChange={selectTab} className="gap-6">
         {/* Su schermi stretti le schede scorrono in orizzontale invece di andare a capo. */}
         <div className="overflow-x-auto">
           <TabsList className="group-data-horizontal/tabs:h-10">
             <TabsTrigger value="amici" className="px-3">
-              Amici
+              I miei amici
+            </TabsTrigger>
+            <TabsTrigger value="cerca" className="px-3">
+              Trova persone
             </TabsTrigger>
             <TabsTrigger value="ricevute" className="px-3">
-              Ricevute
+              Richieste ricevute
               {pending > 0 && (
                 <Badge className="tabular-nums" aria-label={pendingLabel(pending)}>
                   {pending}
@@ -77,10 +90,7 @@ export function FriendsPage() {
               )}
             </TabsTrigger>
             <TabsTrigger value="inviate" className="px-3">
-              Inviate
-            </TabsTrigger>
-            <TabsTrigger value="cerca" className="px-3">
-              Cerca
+              Richieste inviate
             </TabsTrigger>
           </TabsList>
         </div>

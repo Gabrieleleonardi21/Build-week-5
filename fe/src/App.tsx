@@ -4,8 +4,8 @@ import { MotionConfig } from 'motion/react'
 import { ThemeProvider } from 'next-themes'
 import { useState } from 'react'
 
-// Una sola famiglia di icone con un solo peso in tutta l'app (skill design-taste-frontend).
-const ICONS = { size: 20, weight: 'regular' } as const
+// Una sola famiglia di icone, con tratto sottile come nella brand identity Tourevents.
+const ICONS = { size: 20, weight: 'light' } as const
 import { RouterProvider } from 'react-router'
 import { createQueryClient } from '@/app/query-client'
 import { createAppRouter } from '@/app/router'

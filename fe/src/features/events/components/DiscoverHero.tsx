@@ -1,4 +1,4 @@
-import { MapTrifoldIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, MapTrifoldIcon } from '@phosphor-icons/react'
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
@@ -26,7 +26,7 @@ export function DiscoverHero({ featured, search }: DiscoverHeroProps) {
       >
         <Link
           to={`/events/${featured.id}`}
-          className="block overflow-hidden rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="block overflow-hidden rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           <img
             src={featured.coverUrl}
@@ -49,7 +49,7 @@ export function DiscoverHero({ featured, search }: DiscoverHeroProps) {
     <section className="grid items-center gap-10 py-10 md:py-16 lg:grid-cols-[1.1fr_1fr]">
       <div className="grid gap-6">
         <div className="grid gap-4">
-          <h1 className="text-4xl font-semibold tracking-tight text-balance md:text-5xl">
+          <h1 className="text-4xl font-semibold text-balance md:text-6xl">
             Scopri gli eventi dal vivo in Italia
           </h1>
           <p className="max-w-[52ch] text-lg text-muted-foreground text-pretty">
@@ -61,6 +61,7 @@ export function DiscoverHero({ featured, search }: DiscoverHeroProps) {
           <Link to="/map">
             <MapTrifoldIcon data-icon="inline-start" aria-hidden="true" />
             Esplora la mappa
+            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
           </Link>
         </Button>
       </div>

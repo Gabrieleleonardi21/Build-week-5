@@ -36,6 +36,13 @@ function Enrolled({ event, ticket, canLeave }: EnrolledProps) {
       <p className="text-sm text-muted-foreground">
         Codice del ticket: <span className="font-mono font-medium text-foreground">{ticket.code}</span>
       </p>
+      <p className="text-sm text-muted-foreground">
+        Mostra il codice all'ingresso. Intanto puoi{' '}
+        <a href="#partecipanti" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+          vedere chi partecipa
+        </a>{' '}
+        e aggiungerli agli amici.
+      </p>
       {canLeave && (
         <ConfirmDialog
           trigger={
@@ -140,7 +147,7 @@ export function JoinButton({ event }: JoinButtonProps) {
           {errorMessage(join.error)}
         </p>
       )}
-      <Note>Gratis. Ricevi il ticket anche per email.</Note>
+      <Note>Gratis. Ricevi subito il ticket con il codice d'ingresso, anche per email.</Note>
     </div>
   )
 }
