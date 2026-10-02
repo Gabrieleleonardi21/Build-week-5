@@ -37,8 +37,10 @@ export function FormField({ id, label, error, description, children }: FormField
     ariaDescribedBy = describedBy.join(' ')
   }
 
+  // content-start: in una riga a due colonne il campo viene allungato all'altezza del vicino;
+  // senza, lo spazio in piu' allarga l'etichetta e la casella scende (es. "Inizio" accanto a "Fine" con aiuto).
   return (
-    <div className="grid gap-2">
+    <div className="grid content-start gap-2">
       <Label htmlFor={id}>{label}</Label>
       {children({ id, 'aria-invalid': error !== undefined, 'aria-describedby': ariaDescribedBy })}
       {description !== undefined && (
