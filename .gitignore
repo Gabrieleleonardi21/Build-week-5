@@ -1,5 +1,5 @@
-# Backend
-back-end/target/
+# Backend: output di Maven in qualunque cartella, mai nei commit
+target/
 
 # Frontend
 fe/node_modules/
@@ -14,3 +14,8 @@ fe/.env.local
 .idea/
 .vscode/
 *.iml
+
+# macOS / iCloud: file di sistema e copie duplicate ("Nome 2.tsx") create dalla sincronizzazione
+.DS_Store
+* [0-9]
+* [0-9].*
