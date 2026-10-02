@@ -31,7 +31,7 @@ export function BasicsSection({ form, descriptionAction }: BasicsSectionProps) {
         {descriptionAction}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField id="event-starts-at" label="Inizio" error={errors.startsAt?.message}>
+        <FormField id="event-starts-at" label="Inizio" description="Data e ora di apertura." error={errors.startsAt?.message}>
           {(control) => <Input {...control} {...form.register('startsAt')} type="datetime-local" />}
         </FormField>
         <FormField id="event-ends-at" label="Fine" description="Facoltativa." error={errors.endsAt?.message}>
